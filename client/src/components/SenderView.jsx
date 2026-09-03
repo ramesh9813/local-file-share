@@ -3,9 +3,17 @@ import { useNavigate } from 'react-router-dom';
 import { 
   UploadCloud, FileText, Image as ImageIcon, Video, Music, Archive, 
   File, Trash2, Dices, Copy, Check, Users, ArrowLeft, RefreshCw, 
-  Share2, PlusCircle, CheckCircle, Wifi, AlertCircle 
+  Share2, PlusCircle, CheckCircle, Wifi, AlertCircle, Download, UserCheck 
 } from 'lucide-react';
 import { formatBytes, generateFourDigitCode, getFileCategory } from '../utils/fileHelpers';
+import { uploadFilesWithProgress, getApiBaseUrl } from '../utils/apiClient';
+import { 
+  saveActiveSession, 
+  getSavedActiveSession, 
+  clearSavedActiveSession, 
+  saveDownloadRecord, 
+  getSavedDownloads 
+} from '../utils/sessionStorage';
 import confetti from 'canvas-confetti';
 
 export default function SenderView({ 
@@ -26,11 +34,15 @@ export default function SenderView({
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef(null);
 
-  // Upload & Session state
+  // Upload & Active Session state
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
-  const [activeSession, setActiveSession] = useState(null);
+  const [activeSession, setActiveSession] = useState(() => getSavedActiveSession());
   const [connectedReceivers, setConnectedReceivers] = useState([]);
+  const [downloadActivities, setDownloadActivities] = useState(() => {
+    const saved = getSavedActiveSession();
+    return saved ? getSavedDownloads(saved.code) : [];
+  });
   const [copiedCode, setCopiedCode] = useState(false);
   const [copiedLink, setCopiedLink] = useState(false);
 
@@ -47,46 +59,99 @@ export default function SenderView({
     if (groupName) localStorage.setItem('localshare_group', groupName);
   }, [groupName]);
 
-  // Socket.IO Room Listeners
+  // When activeSession changes, sync with storage and download records
+  useEffect(() => {
+    if (activeSession) {
+      saveActiveSession(activeSession);
+      setDownloadActivities(getSavedDownloads(activeSession.code));
+    }
+  }, [activeSession]);
+
+  // Socket.IO Room & Real-time Auto-Send Listeners
   useEffect(() => {
     if (!socket || !activeSession) return;
 
+    // Join room as sender
     socket.emit('join_room', {
       code: activeSession.code,
       role: 'sender',
       name: activeSession.senderName
     });
 
+    // Automatically sync stored files with server room
+    socket.emit('sync_session_from_sender', {
+      code: activeSession.code,
+      roomData: activeSession
+    });
+
+    // When a new receiver connects with the 4-digit PIN:
+    // "and if new user with pin connectwd send them auto"
     const handleReceiverJoined = (data) => {
-      showToast(`Receiver "${data.receiverName}" connected!`, 'success');
+      showToast(`Receiver "${data.receiverName}" connected! Files sent automatically.`, 'success');
+
       setConnectedReceivers(prev => {
         if (!prev.some(r => r.socketId === data.socketId)) {
           return [...prev, { socketId: data.socketId, name: data.receiverName }];
         }
         return prev;
       });
+
+      // Auto-send session and files directly to this newly connected receiver!
+      socket.emit('sync_session_from_sender', {
+        code: activeSession.code,
+        roomData: activeSession,
+        targetSocketId: data.socketId
+      });
     };
 
     const handleReceiverLeft = (data) => {
-      showToast(`Receiver "${data.receiverName}" left.`, 'info');
+      showToast(`Receiver "${data.receiverName}" disconnected.`, 'info');
       setConnectedReceivers(prev => prev.filter(r => r.name !== data.receiverName));
     };
 
     const handleFilesUpdated = (data) => {
-      setActiveSession(prev => ({
-        ...prev,
-        files: data.files
-      }));
+      setActiveSession(prev => {
+        if (!prev) return prev;
+        const updated = { ...prev, files: data.files };
+        saveActiveSession(updated);
+        return updated;
+      });
+    };
+
+    // When a receiver downloads a file:
+    // "for sender show who downloaded that file name card only"
+    const handleDownloadActivity = (record) => {
+      showToast(`"${record.receiverName}" downloaded "${record.fileName}"`, 'info');
+      setDownloadActivities(prev => {
+        const updated = [record, ...prev];
+        saveDownloadRecord(activeSession.code, record);
+        return updated;
+      });
+    };
+
+    // If server requests sender's cached files
+    const handleRequestSenderFiles = (data) => {
+      if (data.code === activeSession.code) {
+        socket.emit('sync_session_from_sender', {
+          code: activeSession.code,
+          roomData: activeSession,
+          targetSocketId: data.requesterId
+        });
+      }
     };
 
     socket.on('receiver_joined', handleReceiverJoined);
     socket.on('receiver_left', handleReceiverLeft);
     socket.on('files_updated', handleFilesUpdated);
+    socket.on('download_activity', handleDownloadActivity);
+    socket.on('request_sender_files', handleRequestSenderFiles);
 
     return () => {
       socket.off('receiver_joined', handleReceiverJoined);
       socket.off('receiver_left', handleReceiverLeft);
       socket.off('files_updated', handleFilesUpdated);
+      socket.off('download_activity', handleDownloadActivity);
+      socket.off('request_sender_files', handleRequestSenderFiles);
     };
   }, [socket, activeSession]);
 
@@ -136,6 +201,7 @@ export default function SenderView({
 
   const totalSizeBytes = selectedFiles.reduce((acc, f) => acc + f.size, 0);
 
+  // START SHARING & UPLOAD
   const handleStartSharing = async (e) => {
     e.preventDefault();
 
@@ -157,42 +223,39 @@ export default function SenderView({
     }
 
     setIsUploading(true);
-    setUploadProgress(10);
+    setUploadProgress(5);
 
     try {
-      const formData = new FormData();
-      formData.append('code', code.trim());
-      formData.append('groupName', groupName.trim());
-      formData.append('senderName', senderName.trim());
-
-      selectedFiles.forEach(file => {
-        formData.append('files', file);
+      // Use real XMLHttpRequest upload tracker
+      const result = await uploadFilesWithProgress({
+        code: code.trim(),
+        groupName: groupName.trim(),
+        senderName: senderName.trim(),
+        files: selectedFiles,
+        onProgress: (percent) => {
+          setUploadProgress(percent);
+        }
       });
 
-      const progressInterval = setInterval(() => {
-        setUploadProgress(prev => (prev < 90 ? prev + 15 : prev));
-      }, 200);
-
-      const response = await fetch('/api/upload', {
-        method: 'POST',
-        body: formData
-      });
-
-      clearInterval(progressInterval);
-      setUploadProgress(100);
-
-      const result = await response.json();
-
-      if (!response.ok || !result.success) {
-        throw new Error(result.error || 'Failed to upload files.');
-      }
-
-      setActiveSession({
+      const sessionObj = {
         code: result.room.code,
         groupName: result.room.groupName,
         senderName: result.room.senderName,
-        files: result.room.files
-      });
+        files: result.room.files,
+        createdAt: new Date().toISOString()
+      };
+
+      // Store in local storage as requested
+      saveActiveSession(sessionObj);
+      setActiveSession(sessionObj);
+
+      // Notify socket server of active session
+      if (socket) {
+        socket.emit('sync_session_from_sender', {
+          code: sessionObj.code,
+          roomData: sessionObj
+        });
+      }
 
       confetti({
         particleCount: 80,
@@ -203,45 +266,44 @@ export default function SenderView({
       showToast(`Sharing session active! PIN: ${code}`, 'success');
       setSelectedFiles([]);
     } catch (err) {
-      showToast(err.message, 'error');
+      showToast(err.message || 'Failed to upload files.', 'error');
     } finally {
       setIsUploading(false);
       setUploadProgress(0);
     }
   };
 
+  // Upload more files to active session
   const handleAddMoreFiles = async (e) => {
     if (!e.target.files || e.target.files.length === 0 || !activeSession) return;
 
     setIsAddingMore(true);
     try {
-      const formData = new FormData();
-      formData.append('code', activeSession.code);
-      formData.append('groupName', activeSession.groupName);
-      formData.append('senderName', activeSession.senderName);
-
-      Array.from(e.target.files).forEach(file => {
-        formData.append('files', file);
+      const result = await uploadFilesWithProgress({
+        code: activeSession.code,
+        groupName: activeSession.groupName,
+        senderName: activeSession.senderName,
+        files: Array.from(e.target.files)
       });
 
-      const res = await fetch('/api/upload', {
-        method: 'POST',
-        body: formData
-      });
+      const updated = {
+        ...activeSession,
+        files: result.room.files
+      };
 
-      const data = await res.json();
-      if (!res.ok || !data.success) {
-        throw new Error(data.error || 'Failed to add files');
+      saveActiveSession(updated);
+      setActiveSession(updated);
+
+      if (socket) {
+        socket.emit('sync_session_from_sender', {
+          code: updated.code,
+          roomData: updated
+        });
       }
-
-      setActiveSession(prev => ({
-        ...prev,
-        files: data.room.files
-      }));
 
       showToast(`Added ${e.target.files.length} more file(s)!`, 'success');
     } catch (err) {
-      showToast(err.message, 'error');
+      showToast(err.message || 'Failed to add files.', 'error');
     } finally {
       setIsAddingMore(false);
       if (addFileInputRef.current) addFileInputRef.current.value = '';
@@ -264,23 +326,26 @@ export default function SenderView({
   };
 
   const handleEndSession = async () => {
-    if (!window.confirm('Are you sure you want to end this sharing session? Receivers will no longer be able to download these files.')) {
+    if (!window.confirm('Are you sure you want to end this sharing session? Receivers will no longer be able to access these files.')) {
       return;
     }
 
     if (activeSession) {
       try {
-        await fetch(`/api/room/${activeSession.code}`, { method: 'DELETE' });
+        const baseUrl = getApiBaseUrl();
+        await fetch(`${baseUrl}/api/room/${activeSession.code}`, { method: 'DELETE' });
       } catch (e) {
         console.error('Error closing room:', e);
       }
     }
+    clearSavedActiveSession();
     setActiveSession(null);
     setConnectedReceivers([]);
-    showToast('Sharing session closed.', 'info');
+    setDownloadActivities([]);
+    showToast('Sharing session closed and cleared.', 'info');
   };
 
-  // Uniform icon renderer using text-indigo-400
+  // Uniform icon renderer
   const renderFileIcon = (fileName, mimeType) => {
     const category = getFileCategory(fileName, mimeType);
     switch (category) {
@@ -294,17 +359,22 @@ export default function SenderView({
   };
 
   // ─────────────────────────────────────────────────────────────
-  // Active Session View
+  // ACTIVE SESSION DASHBOARD VIEW
   // ─────────────────────────────────────────────────────────────
   if (activeSession) {
     const sessionUrl = `${window.location.origin}/receive?code=${activeSession.code}`;
+    const baseUrl = getApiBaseUrl();
 
     return (
       <div className="max-w-4xl mx-auto space-y-6 animate-fadeIn py-4">
         {/* Top bar */}
         <div className="flex flex-wrap items-center justify-between gap-4">
           <button
-            onClick={() => setActiveSession(null)}
+            onClick={() => {
+              if (window.confirm('Create a new session? Your current session will remain stored in local storage until ended.')) {
+                setActiveSession(null);
+              }
+            }}
             className="flex items-center gap-2 text-xs font-semibold text-slate-400 hover:text-white transition"
           >
             <ArrowLeft className="w-4 h-4 text-indigo-400" />
@@ -314,7 +384,7 @@ export default function SenderView({
           <div className="flex items-center gap-3">
             <button
               onClick={onOpenQr}
-              className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-slate-900 border border-slate-800 hover:border-indigo-500/40 text-xs text-slate-300 transition font-medium"
+              className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-slate-900 border border-slate-800 hover:border-indigo-500/40 text-xs text-slate-300 transition font-semibold"
             >
               <Share2 className="w-3.5 h-3.5 text-indigo-400" />
               <span>Show QR Code</span>
@@ -334,13 +404,13 @@ export default function SenderView({
             <div className="space-y-2 text-center md:text-left">
               <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 text-xs font-semibold">
                 <Wifi className="w-3.5 h-3.5 text-indigo-400 animate-pulse" />
-                <span>Active Local Sharing Session</span>
+                <span>Active Local Sharing Session (Stored in Local Storage)</span>
               </div>
               <h2 className="text-2xl sm:text-3xl font-bold text-white tracking-tight">
                 {activeSession.groupName}
               </h2>
               <p className="text-sm text-slate-400 font-normal leading-relaxed">
-                Shared by <span className="font-semibold text-slate-200">{activeSession.senderName}</span> • Give this 4-digit code to anyone on the same Wi-Fi
+                Shared by <span className="font-semibold text-slate-200">{activeSession.senderName}</span> • Give this 4-digit code to anyone on your network
               </p>
             </div>
 
@@ -395,7 +465,7 @@ export default function SenderView({
               </h4>
               <p className="text-xs text-slate-400 font-normal mt-0.5">
                 {connectedReceivers.length > 0 
-                  ? `${connectedReceivers.length} receiver(s) connected and viewing files` 
+                  ? `${connectedReceivers.length} receiver(s) connected • files automatically delivered` 
                   : 'Waiting for receiver to enter 4-digit PIN on this network...'}
               </p>
             </div>
@@ -414,6 +484,61 @@ export default function SenderView({
               </span>
             )}
           </div>
+        </div>
+
+        {/* ─────────────────────────────────────────────────────────────
+            "for sender show who downloaded that file name card only"
+            DEDICATED WHO DOWNLOADED THAT FILE CARD SECTION
+           ───────────────────────────────────────────────────────────── */}
+        <div className="glass-panel rounded-3xl p-6 sm:p-8 border border-slate-800 space-y-4 bg-slate-900/70">
+          <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+            <div className="flex items-center gap-2">
+              <UserCheck className="w-4 h-4 text-indigo-400" />
+              <h3 className="text-xs font-bold uppercase tracking-wider text-indigo-400">
+                Who Downloaded Files ({downloadActivities.length})
+              </h3>
+            </div>
+            {downloadActivities.length > 0 && (
+              <span className="text-xs text-slate-400 font-normal">
+                Live download tracking
+              </span>
+            )}
+          </div>
+
+          {downloadActivities.length === 0 ? (
+            <div className="p-4 rounded-2xl bg-slate-950/40 border border-slate-800 text-center py-6">
+              <Download className="w-8 h-8 text-indigo-400/40 mx-auto mb-2" />
+              <p className="text-xs font-semibold text-white">No files have been downloaded yet</p>
+              <p className="text-[11px] text-slate-400 mt-0.5">When a receiver downloads an individual file or ZIP, their card will appear here automatically.</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-60 overflow-y-auto pr-1">
+              {downloadActivities.map((act, index) => (
+                <div 
+                  key={act.id || index}
+                  className="p-3.5 rounded-2xl bg-slate-950/80 border border-slate-800 hover:border-indigo-500/40 transition flex items-center justify-between gap-3 animate-fadeIn"
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="w-9 h-9 rounded-xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 flex items-center justify-center font-bold text-xs flex-shrink-0">
+                      {act.receiverName ? act.receiverName[0].toUpperCase() : 'U'}
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-xs font-semibold text-white truncate" title={act.receiverName}>
+                        {act.receiverName}
+                      </p>
+                      <p className="text-[11px] text-indigo-300 font-mono truncate max-w-[180px]" title={act.fileName}>
+                        {act.fileName}
+                      </p>
+                    </div>
+                  </div>
+
+                  <span className="text-[10px] font-mono text-slate-400 bg-slate-900 px-2 py-1 rounded-lg border border-slate-800 flex-shrink-0">
+                    {act.timestamp}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Shared Files List */}
@@ -469,7 +594,7 @@ export default function SenderView({
 
                 <div className="flex items-center gap-2">
                   <a
-                    href={`/api/download/${activeSession.code}/${file.id}`}
+                    href={`${baseUrl}/api/download/${activeSession.code}/${file.id}`}
                     download={file.name}
                     className="p-2 text-xs font-semibold text-indigo-400 hover:text-indigo-300 hover:bg-indigo-500/10 rounded-lg transition"
                     title="Download file"
@@ -486,7 +611,7 @@ export default function SenderView({
   }
 
   // ─────────────────────────────────────────────────────────────
-  // Configuration & Dropzone Form View
+  // CONFIGURATION & DROPZONE FORM VIEW
   // ─────────────────────────────────────────────────────────────
   return (
     <div className="max-w-3xl mx-auto space-y-8 animate-fadeIn py-4">
@@ -715,7 +840,7 @@ export default function SenderView({
           {isUploading ? (
             <>
               <RefreshCw className="w-4 h-4 animate-spin text-white" />
-              <span>Uploading Files...</span>
+              <span>Uploading ({uploadProgress}%)...</span>
             </>
           ) : (
             <>

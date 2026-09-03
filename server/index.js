@@ -180,9 +180,103 @@ io.on('connection', (socket) => {
           groupName: room.groupName,
           senderName: room.senderName,
           files: room.files,
-          receiversCount: room.receivers.length
+          receiversCount: room.receivers.length,
+          downloads: room.downloads || []
         }
       });
+    }
+  });
+
+  // Receiver notifies that a file was downloaded
+  socket.on('file_downloaded', ({ code, fileId, fileName, receiverName }) => {
+    if (!code) return;
+    const room = rooms.get(code);
+    const downloadRecord = {
+      id: crypto.randomBytes(4).toString('hex'),
+      fileId: fileId || 'unknown',
+      fileName: fileName || 'Unknown file',
+      receiverName: receiverName || 'Anonymous Receiver',
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      date: new Date().toISOString()
+    };
+    if (room) {
+      if (!room.downloads) room.downloads = [];
+      room.downloads.unshift(downloadRecord);
+    }
+    io.to(code).emit('download_activity', downloadRecord);
+  });
+
+  // Sender syncs active session directly to server / room
+  socket.on('sync_session_from_sender', ({ code, roomData, targetSocketId }) => {
+    if (!code || !roomData) return;
+    let room = rooms.get(code);
+    if (!room) {
+      room = {
+        code,
+        groupName: roomData.groupName || 'Shared Files',
+        senderName: roomData.senderName || 'Sender',
+        createdAt: new Date().toISOString(),
+        files: roomData.files || [],
+        receivers: [],
+        downloads: []
+      };
+      rooms.set(code, room);
+    } else {
+      if (roomData.files && roomData.files.length > 0) {
+        room.files = roomData.files;
+      }
+    }
+
+    const payload = {
+      exists: true,
+      room: {
+        code: room.code,
+        groupName: room.groupName,
+        senderName: room.senderName,
+        files: room.files,
+        receiversCount: room.receivers.length,
+        downloads: room.downloads || []
+      }
+    };
+
+    if (targetSocketId) {
+      io.to(targetSocketId).emit('room_state', payload);
+      io.to(targetSocketId).emit('files_updated', {
+        code: room.code,
+        groupName: room.groupName,
+        senderName: room.senderName,
+        files: room.files
+      });
+    } else {
+      io.to(code).emit('room_state', payload);
+    }
+  });
+
+  // Receiver asks for room data via Socket.IO directly
+  socket.on('get_room_data', ({ code }, callback) => {
+    if (!code) return;
+    const room = rooms.get(code);
+    if (room && room.files && room.files.length > 0) {
+      const response = {
+        success: true,
+        room: {
+          code: room.code,
+          groupName: room.groupName,
+          senderName: room.senderName,
+          files: room.files,
+          receiversCount: room.receivers.length,
+          downloads: room.downloads || []
+        }
+      };
+      if (typeof callback === 'function') callback(response);
+      socket.emit('room_data_response', response);
+    } else {
+      io.to(code).emit('request_sender_files', { requesterId: socket.id, code });
+      const fallback = {
+        success: false,
+        error: `No active sharing session found for code "${code}".`
+      };
+      if (typeof callback === 'function') callback(fallback);
     }
   });
 
@@ -377,7 +471,8 @@ app.get('/api/room/:code', (req, res) => {
       senderName: room.senderName,
       createdAt: room.createdAt,
       files: room.files,
-      receiversCount: room.receivers.length
+      receiversCount: room.receivers.length,
+      downloads: room.downloads || []
     }
   });
 });
@@ -400,6 +495,20 @@ app.get('/api/download/:code/:fileId', (req, res) => {
   if (!fs.existsSync(filePath)) {
     return res.status(404).send('File no longer exists on disk.');
   }
+
+  // Track download activity
+  const receiverName = req.query.receiver || req.query.name || 'Anonymous Receiver';
+  const downloadRecord = {
+    id: crypto.randomBytes(4).toString('hex'),
+    fileId,
+    fileName: fileInfo.name,
+    receiverName,
+    timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+    date: new Date().toISOString()
+  };
+  if (!room.downloads) room.downloads = [];
+  room.downloads.unshift(downloadRecord);
+  io.to(code).emit('download_activity', downloadRecord);
 
   res.download(filePath, fileInfo.name, (err) => {
     if (err) {
@@ -442,6 +551,19 @@ app.get('/api/download-all/:code', (req, res) => {
     return res.status(404).send('No files to download.');
   }
 
+  const receiverName = req.query.receiver || req.query.name || 'Anonymous Receiver';
+  const downloadRecord = {
+    id: crypto.randomBytes(4).toString('hex'),
+    fileId: 'all',
+    fileName: `All Files (${room.files.length} items ZIP)`,
+    receiverName,
+    timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+    date: new Date().toISOString()
+  };
+  if (!room.downloads) room.downloads = [];
+  room.downloads.unshift(downloadRecord);
+  io.to(code).emit('download_activity', downloadRecord);
+
   const safeGroupName = room.groupName.replace(/[^a-zA-Z0-9_-]/g, '_') || 'files';
   const zipFilename = `${safeGroupName}-${code}.zip`;
 
@@ -449,7 +571,7 @@ app.get('/api/download-all/:code', (req, res) => {
   res.setHeader('Content-Disposition', `attachment; filename="${zipFilename}"`);
 
   const archive = archiver('zip', {
-    zlib: { level: 6 } // Good compression balance
+    zlib: { level: 6 }
   });
 
   archive.on('error', (err) => {
@@ -459,7 +581,6 @@ app.get('/api/download-all/:code', (req, res) => {
 
   archive.pipe(res);
 
-  // Append all files in the room to zip
   for (const file of room.files) {
     const filePath = path.join(UPLOADS_DIR, code, file.storedName);
     if (fs.existsSync(filePath)) {

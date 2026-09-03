@@ -10,6 +10,7 @@ import LandingPage from './components/LandingPage';
 import SenderView from './components/SenderView';
 import ReceiverView from './components/ReceiverView';
 import QrModal from './components/QrModal';
+import { getApiBaseUrl, safeFetchJson } from './utils/apiClient';
 
 export default function App() {
   const [networkInfo, setNetworkInfo] = useState(null);
@@ -28,28 +29,29 @@ export default function App() {
 
   // Fetch Local Network Information
   useEffect(() => {
-    fetch('/api/network-info')
-      .then(res => res.json())
+    const baseUrl = getApiBaseUrl();
+    safeFetchJson('/api/network-info')
       .then(data => {
         if (data.success) {
           setNetworkInfo(data);
         }
       })
       .catch(err => {
-        console.error('Failed to get network info:', err);
+        console.warn('Network info lookup:', err.message);
       });
   }, []);
 
   // Initialize Socket.IO connection
   useEffect(() => {
-    const newSocket = io({
+    const baseUrl = getApiBaseUrl();
+    const newSocket = io(baseUrl || undefined, {
       transports: ['websocket', 'polling'],
       reconnectionAttempts: 10,
       reconnectionDelay: 1000
     });
 
     newSocket.on('connect', () => {
-      console.log('Connected to local LAN Socket server:', newSocket.id);
+      console.log('Connected to Socket server:', newSocket.id);
     });
 
     newSocket.on('connect_error', (error) => {

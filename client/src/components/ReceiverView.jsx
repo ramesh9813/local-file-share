@@ -7,6 +7,7 @@ import {
   Wifi, FolderDown 
 } from 'lucide-react';
 import { formatBytes, getFileCategory, isPreviewable } from '../utils/fileHelpers';
+import { safeFetchJson, getApiBaseUrl } from '../utils/apiClient';
 import FilePreviewModal from './FilePreviewModal';
 import confetti from 'canvas-confetti';
 
@@ -52,17 +53,17 @@ export default function ReceiverView({
     }
   }, [receiverName]);
 
-  // Socket listener when session is connected
+  // Socket listeners for real-time room updates & auto-send from sender
   useEffect(() => {
-    if (!socket || !sessionData) return;
+    if (!socket) return;
 
-    const currentCode = sessionData.code;
-
-    socket.emit('join_room', {
-      code: currentCode,
-      role: 'receiver',
-      name: receiverName || 'Anonymous Receiver'
-    });
+    const handleRoomState = (data) => {
+      if (data && data.exists && data.room) {
+        setSessionData(data.room);
+        setIsConnecting(false);
+        showToast(`Files received for session "${data.room.groupName}"!`, 'success');
+      }
+    };
 
     const handleFilesUpdated = (data) => {
       showToast('Sender uploaded new files!', 'info');
@@ -77,13 +78,26 @@ export default function ReceiverView({
       setSessionData(null);
     };
 
+    socket.on('room_state', handleRoomState);
     socket.on('files_updated', handleFilesUpdated);
     socket.on('session_closed', handleSessionClosed);
 
     return () => {
+      socket.off('room_state', handleRoomState);
       socket.off('files_updated', handleFilesUpdated);
       socket.off('session_closed', handleSessionClosed);
     };
+  }, [socket]);
+
+  // Join room when sessionData is set
+  useEffect(() => {
+    if (!socket || !sessionData) return;
+
+    socket.emit('join_room', {
+      code: sessionData.code,
+      role: 'receiver',
+      name: receiverName || 'Anonymous Receiver'
+    });
   }, [socket, sessionData, receiverName]);
 
   // Handle individual digit typing
@@ -127,7 +141,7 @@ export default function ReceiverView({
 
   const getFullPin = () => pinDigits.join('');
 
-  // Connect to session using 4-digit code
+  // Connect to session using 4-digit code (fixes doctype is not valid json)
   const handleConnect = async (customCode) => {
     const codeToVerify = customCode || getFullPin();
     if (!/^\d{4}$/.test(codeToVerify)) {
@@ -138,34 +152,80 @@ export default function ReceiverView({
     setIsConnecting(true);
     setErrorMessage('');
 
+    // Attempt 1: Try safe API fetch with automatic URL routing
     try {
-      const response = await fetch(`/api/room/${codeToVerify}`);
-      const data = await response.json();
-
-      if (!response.ok || !data.success) {
-        throw new Error(data.error || 'Failed to connect. Session not found.');
+      const data = await safeFetchJson(`/api/room/${codeToVerify}`);
+      if (data && data.room) {
+        setSessionData(data.room);
+        showToast(`Connected to session "${data.room.groupName}"!`, 'success');
+        confetti({
+          particleCount: 60,
+          spread: 60,
+          origin: { y: 0.7 }
+        });
+        setIsConnecting(false);
+        return;
       }
+    } catch (httpErr) {
+      console.warn('HTTP fetch failed, attempting real-time Socket.IO room lookup:', httpErr.message);
+    }
 
-      setSessionData(data.room);
-      showToast(`Connected to session "${data.room.groupName}"!`, 'success');
-
-      confetti({
-        particleCount: 60,
-        spread: 60,
-        origin: { y: 0.7 }
+    // Attempt 2: Fallback via Socket.IO directly (Peer-to-peer / Server channel)
+    if (socket) {
+      socket.emit('join_room', {
+        code: codeToVerify,
+        role: 'receiver',
+        name: receiverName || 'Anonymous Receiver'
       });
-    } catch (err) {
-      setErrorMessage(err.message);
-      showToast(err.message, 'error');
-    } finally {
+
+      socket.emit('get_room_data', { code: codeToVerify }, (response) => {
+        setIsConnecting(false);
+        if (response && response.success && response.room) {
+          setSessionData(response.room);
+          showToast(`Connected to session "${response.room.groupName}"!`, 'success');
+          confetti({
+            particleCount: 60,
+            spread: 60,
+            origin: { y: 0.7 }
+          });
+        } else {
+          setErrorMessage(response?.error || `No active sharing session found for code "${codeToVerify}".`);
+        }
+      });
+
+      // Safety timeout
+      setTimeout(() => {
+        setIsConnecting(prev => {
+          if (prev) {
+            setErrorMessage(`No response for code "${codeToVerify}". Ensure sender is online.`);
+            return false;
+          }
+          return false;
+        });
+      }, 5000);
+    } else {
       setIsConnecting(false);
+      setErrorMessage('Could not connect to server or peer network.');
     }
   };
 
-  // Download Individual File
+  // Download Individual File & notify sender
   const handleDownloadSingle = (file) => {
+    const effectiveReceiver = receiverName || 'Anonymous Receiver';
     showToast(`Downloading "${file.name}"...`, 'info');
-    const downloadUrl = `/api/download/${sessionData.code}/${file.id}`;
+
+    // Notify sender via Socket.IO: "for sender show who downloaded that file name card only"
+    if (socket) {
+      socket.emit('file_downloaded', {
+        code: sessionData.code,
+        fileId: file.id,
+        fileName: file.name,
+        receiverName: effectiveReceiver
+      });
+    }
+
+    const baseUrl = getApiBaseUrl();
+    const downloadUrl = `${baseUrl}/api/download/${sessionData.code}/${file.id}?receiver=${encodeURIComponent(effectiveReceiver)}`;
     
     const link = document.createElement('a');
     link.href = downloadUrl;
@@ -175,17 +235,29 @@ export default function ReceiverView({
     document.body.removeChild(link);
   };
 
-  // Download ALL files as a single ZIP package
+  // Download ALL files as a single ZIP package & notify sender
   const handleDownloadAll = () => {
     if (!sessionData || !sessionData.files || sessionData.files.length === 0) {
       showToast('No files available to download.', 'error');
       return;
     }
 
+    const effectiveReceiver = receiverName || 'Anonymous Receiver';
     setIsDownloadingAll(true);
     showToast('Preparing ZIP package of all files...', 'info');
 
-    const zipUrl = `/api/download-all/${sessionData.code}`;
+    // Notify sender via Socket.IO
+    if (socket) {
+      socket.emit('file_downloaded', {
+        code: sessionData.code,
+        fileId: 'all',
+        fileName: `All Files (${sessionData.files.length} items ZIP)`,
+        receiverName: effectiveReceiver
+      });
+    }
+
+    const baseUrl = getApiBaseUrl();
+    const zipUrl = `${baseUrl}/api/download-all/${sessionData.code}?receiver=${encodeURIComponent(effectiveReceiver)}`;
     const link = document.createElement('a');
     link.href = zipUrl;
     link.setAttribute('download', `${sessionData.groupName || 'files'}-${sessionData.code}.zip`);
@@ -204,16 +276,16 @@ export default function ReceiverView({
     }, 1500);
   };
 
-  // Uniform icon renderer using text-indigo-400
+  // Uniform icon renderer
   const renderFileIcon = (fileName, mimeType) => {
     const category = getFileCategory(fileName, mimeType);
     switch (category) {
       case 'image': return <ImageIcon className="w-5 h-5 text-indigo-400" />;
-      case 'video': return <Video className="w-5 h-5 text-indigo-400" />;
-      case 'audio': return <Music className="w-5 h-5 text-indigo-400" />;
-      case 'text': return <FileText className="w-5 h-5 text-indigo-400" />;
-      case 'archive': return <Archive className="w-5 h-5 text-indigo-400" />;
-      default: return <File className="w-5 h-5 text-indigo-400" />;
+      case 'video': return <Video className="w-5 h-5 text-rose-400" />;
+      case 'audio': return <Music className="w-5 h-5 text-amber-400" />;
+      case 'text': return <FileText className="w-5 h-5 text-emerald-400" />;
+      case 'archive': return <Archive className="w-5 h-5 text-purple-400" />;
+      default: return <File className="w-5 h-5 text-slate-400" />;
     }
   };
 
@@ -254,7 +326,7 @@ export default function ReceiverView({
             <div className="space-y-2">
               <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 text-xs font-semibold">
                 <Wifi className="w-3.5 h-3.5 text-indigo-400 animate-pulse" />
-                <span>Connected to Sender • Live LAN</span>
+                <span>Connected to Sender • Live Transfer</span>
               </div>
               <h2 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
                 {sessionData.groupName}
@@ -412,7 +484,7 @@ export default function ReceiverView({
         </div>
         <h1 className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight">Receive Files</h1>
         <p className="text-sm text-slate-400 font-normal leading-relaxed">
-          Enter the 4-digit code provided by the sender on your local network.
+          Enter the 4-digit code provided by the sender on your network.
         </p>
       </div>
 
@@ -448,7 +520,7 @@ export default function ReceiverView({
           {/* Receiver Display Name (Optional) */}
           <div className="pt-2">
             <label className="block text-xs font-semibold text-slate-300 mb-1.5">
-              Your Name <span className="text-slate-500 font-normal">(so the sender knows who connected)</span>
+              Your Name <span className="text-slate-500 font-normal">(shown to sender when you connect or download)</span>
             </label>
             <input
               type="text"
@@ -488,7 +560,7 @@ export default function ReceiverView({
 
         <div className="pt-2 text-center text-xs text-slate-400 flex items-center justify-center gap-1.5 font-normal">
           <Wifi className="w-3.5 h-3.5 text-indigo-400" />
-          <span>Requires sender and receiver to be on the same local Wi-Fi</span>
+          <span>Local network peer-to-peer connection</span>
         </div>
       </div>
     </div>
