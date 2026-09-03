@@ -24,6 +24,7 @@ export default function Header({ networkInfo, onOpenQr }) {
     refreshActiveSessions 
   } = useSessions();
   const dropdownRef = useRef(null);
+  const mobileMenuRef = useRef(null);
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -34,20 +35,25 @@ export default function Header({ networkInfo, onOpenQr }) {
     }
   }, [location.pathname, refreshActiveSessions]);
 
-  // Close dropdown on click outside
+  // Close dropdowns on click outside
   useEffect(() => {
     const handleClickOutside = (e) => {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
         setSessionsDropdownOpen(false);
       }
+      if (mobileMenuRef.current && !mobileMenuRef.current.contains(e.target)) {
+        setMobileMenuOpen(false);
+      }
     };
-    if (sessionsDropdownOpen) {
+    if (sessionsDropdownOpen || mobileMenuOpen) {
       document.addEventListener('mousedown', handleClickOutside);
+      document.addEventListener('touchstart', handleClickOutside);
     }
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('touchstart', handleClickOutside);
     };
-  }, [sessionsDropdownOpen]);
+  }, [sessionsDropdownOpen, mobileMenuOpen]);
 
   const navLinkClass = ({ isActive }) =>
     `px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all duration-200 flex items-center gap-2 ${
@@ -359,71 +365,73 @@ export default function Header({ networkInfo, onOpenQr }) {
             )}
           </button>
 
-          {/* Mobile Hamburger Toggle */}
-          <button
-            onClick={() => setMobileMenuOpen(prev => !prev)}
-            className="md:hidden p-2 rounded-xl bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white transition"
-            aria-label="Toggle Navigation Menu"
-          >
-            {mobileMenuOpen ? (
-              <X className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
-            ) : (
-              <Menu className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+          {/* Mobile Hamburger Toggle & Floating Dropdown Card Overlay */}
+          <div className="relative md:hidden" ref={mobileMenuRef}>
+            <button
+              onClick={() => setMobileMenuOpen(prev => !prev)}
+              className="p-2 rounded-xl bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white transition"
+              aria-label="Toggle Navigation Menu"
+            >
+              {mobileMenuOpen ? (
+                <X className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+              ) : (
+                <Menu className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+              )}
+            </button>
+
+            {/* Dropdown Card - Floating Overlay (Does NOT push or stretch main UI) */}
+            {mobileMenuOpen && (
+              <div className="absolute right-0 mt-2 w-52 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xl z-50 p-2 space-y-1 animate-fadeIn">
+                <NavLink
+                  to="/"
+                  end
+                  onClick={() => setMobileMenuOpen(false)}
+                  className={({ isActive }) =>
+                    `flex items-center gap-2.5 px-3.5 py-2 rounded-xl text-xs font-semibold transition ${
+                      isActive 
+                        ? 'bg-indigo-600 text-white shadow-sm' 
+                        : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
+                    }`
+                  }
+                >
+                  <Home className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+                  <span>Home</span>
+                </NavLink>
+
+                <NavLink
+                  to="/send"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className={({ isActive }) =>
+                    `flex items-center gap-2.5 px-3.5 py-2 rounded-xl text-xs font-semibold transition ${
+                      isActive 
+                        ? 'bg-indigo-600 text-white shadow-sm' 
+                        : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
+                    }`
+                  }
+                >
+                  <UploadCloud className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+                  <span>Share Files</span>
+                </NavLink>
+
+                <NavLink
+                  to="/receive"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className={({ isActive }) =>
+                    `flex items-center gap-2.5 px-3.5 py-2 rounded-xl text-xs font-semibold transition ${
+                      isActive 
+                        ? 'bg-indigo-600 text-white shadow-sm' 
+                        : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
+                    }`
+                  }
+                >
+                  <DownloadCloud className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+                  <span>Receive Files</span>
+                </NavLink>
+              </div>
             )}
-          </button>
+          </div>
         </div>
       </div>
-
-      {/* Mobile Navigation Dropdown */}
-      {mobileMenuOpen && (
-        <div className="md:hidden mt-3 pt-3 border-t border-slate-200 dark:border-slate-800 space-y-1.5 animate-fadeIn">
-          <NavLink
-            to="/"
-            end
-            onClick={() => setMobileMenuOpen(false)}
-            className={({ isActive }) =>
-              `flex items-center gap-2.5 px-4 py-2.5 rounded-xl text-xs font-semibold transition ${
-                isActive 
-                  ? 'bg-indigo-600 text-white' 
-                  : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-900'
-              }`
-            }
-          >
-            <Home className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
-            <span>Home</span>
-          </NavLink>
-
-          <NavLink
-            to="/send"
-            onClick={() => setMobileMenuOpen(false)}
-            className={({ isActive }) =>
-              `flex items-center gap-2.5 px-4 py-2.5 rounded-xl text-xs font-semibold transition ${
-                isActive 
-                  ? 'bg-indigo-600 text-white' 
-                  : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-900'
-              }`
-            }
-          >
-            <UploadCloud className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
-            <span>Share Files (Sender)</span>
-          </NavLink>
-
-          <NavLink
-            to="/receive"
-            onClick={() => setMobileMenuOpen(false)}
-            className={({ isActive }) =>
-              `flex items-center gap-2.5 px-4 py-2.5 rounded-xl text-xs font-semibold transition ${
-                isActive 
-                  ? 'bg-indigo-600 text-white' 
-                  : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-900'
-              }`
-            }
-          >
-            <DownloadCloud className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
-            <span>Receive Files (Receiver)</span>
-          </NavLink>
-        </div>
-      )}
     </header>
   );
 }
