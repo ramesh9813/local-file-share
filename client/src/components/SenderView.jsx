@@ -472,8 +472,41 @@ export default function SenderView({
             </button>
           </div>
 
-          {/* Hero PIN Card */}
-          <div className="rounded-3xl p-6 sm:p-8 border border-slate-200 dark:border-slate-800 relative overflow-hidden bg-white dark:bg-slate-900/70 shadow-sm">
+          {/* USER REQUESTED: Place Receiver Connection Status at the TOP */}
+          <div className="rounded-2xl p-4 sm:p-5 border border-slate-200 dark:border-slate-800 flex items-center justify-between gap-4 bg-white dark:bg-slate-900/70 shadow-sm">
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 rounded-xl bg-indigo-50 dark:bg-indigo-500/10 border border-indigo-100 dark:border-indigo-500/20 text-indigo-600 dark:text-indigo-400 flex-shrink-0">
+                <Users className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
+              </div>
+              <div>
+                <h4 className="text-sm font-semibold text-slate-900 dark:text-white">
+                  Receiver Connection Status
+                </h4>
+                <p className="text-xs text-slate-500 dark:text-slate-400 font-normal mt-0.5">
+                  {connectedReceivers.length > 0 
+                    ? `${connectedReceivers.length} receiver(s) connected to "${currentSession.groupName}"` 
+                    : 'Waiting for receiver to enter this PIN...'}
+                </p>
+              </div>
+            </div>
+
+            <div>
+              {connectedReceivers.length > 0 ? (
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/20 text-emerald-700 dark:text-emerald-400 text-xs font-semibold">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                  Connected ({connectedReceivers.length})
+                </span>
+              ) : (
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-indigo-50 dark:bg-indigo-500/10 border border-indigo-200 dark:border-indigo-500/20 text-indigo-700 dark:text-indigo-400 text-xs font-semibold">
+                  <RefreshCw className="w-3 h-3 animate-spin text-indigo-600 dark:text-indigo-400" />
+                  Listening...
+                </span>
+              )}
+            </div>
+          </div>
+
+          {/* USER REQUESTED: 4-Digit PIN Card with Integrated Who Downloaded Person List Just Below */}
+          <div className="rounded-3xl p-6 sm:p-8 border border-slate-200 dark:border-slate-800 relative overflow-hidden bg-white dark:bg-slate-900/70 shadow-sm space-y-6">
             <div className="flex flex-col md:flex-row items-center justify-between gap-6">
               <div className="space-y-2 text-center md:text-left">
                 <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-50 dark:bg-indigo-500/10 border border-indigo-200 dark:border-indigo-500/20 text-indigo-700 dark:text-indigo-400 text-xs font-semibold">
@@ -509,7 +542,7 @@ export default function SenderView({
             </div>
 
             {/* Quick link bar */}
-            <div className="mt-6 pt-6 border-t border-slate-100 dark:border-slate-800/80 flex flex-wrap items-center justify-between gap-3">
+            <div className="pt-5 border-t border-slate-100 dark:border-slate-800/80 flex flex-wrap items-center justify-between gap-3">
               <div className="flex items-center gap-2 text-xs text-slate-600 dark:text-slate-400 font-normal">
                 <Wifi className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
                 <span>Direct Link:</span>
@@ -525,91 +558,57 @@ export default function SenderView({
                 <span>{copiedLink ? 'Link Copied' : 'Copy Direct Link'}</span>
               </button>
             </div>
-          </div>
 
-          {/* Live Receivers Status */}
-          <div className="rounded-2xl p-5 border border-slate-200 dark:border-slate-800 flex items-center justify-between gap-4 bg-white dark:bg-slate-900/70 shadow-sm">
-            <div className="flex items-center gap-3">
-              <div className="p-2.5 rounded-xl bg-indigo-50 dark:bg-indigo-500/10 border border-indigo-100 dark:border-indigo-500/20 text-indigo-600 dark:text-indigo-400">
-                <Users className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
+            {/* USER REQUESTED: WHO DOWNLOADED PERSON LIST DIRECTLY BELOW IN SAME PIN CARD */}
+            <div className="pt-5 border-t border-slate-100 dark:border-slate-800/80 space-y-3.5">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <UserCheck className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-indigo-600 dark:text-indigo-400">
+                    Who Downloaded Files ({downloadActivities.length})
+                  </h3>
+                </div>
+                {downloadActivities.length > 0 && (
+                  <span className="text-[11px] text-slate-500 dark:text-slate-400 font-normal">
+                    Live download history for PIN {currentSession.code}
+                  </span>
+                )}
               </div>
-              <div>
-                <h4 className="text-sm font-semibold text-slate-900 dark:text-white">
-                  Receiver Connection Status
-                </h4>
-                <p className="text-xs text-slate-500 dark:text-slate-400 font-normal mt-0.5">
-                  {connectedReceivers.length > 0 
-                    ? `${connectedReceivers.length} receiver(s) connected to "${currentSession.groupName}"` 
-                    : 'Waiting for receiver to enter this PIN...'}
-                </p>
-              </div>
-            </div>
 
-            <div>
-              {connectedReceivers.length > 0 ? (
-                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/20 text-emerald-700 dark:text-emerald-400 text-xs font-semibold">
-                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                  Connected
-                </span>
+              {downloadActivities.length === 0 ? (
+                <div className="p-4 rounded-2xl bg-slate-50/80 dark:bg-slate-950/40 border border-slate-200/80 dark:border-slate-800 text-center py-5">
+                  <p className="text-xs font-semibold text-slate-800 dark:text-white">No files downloaded yet for this group</p>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">When a receiver downloads a file or ZIP, their person card will appear here in real-time.</p>
+                </div>
               ) : (
-                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-indigo-50 dark:bg-indigo-500/10 border border-indigo-200 dark:border-indigo-500/20 text-indigo-700 dark:text-indigo-400 text-xs font-semibold">
-                  <RefreshCw className="w-3 h-3 animate-spin text-indigo-600 dark:text-indigo-400" />
-                  Listening...
-                </span>
-              )}
-            </div>
-          </div>
-
-          {/* WHO DOWNLOADED THAT FILE CARD SECTION */}
-          <div className="rounded-3xl p-6 sm:p-8 border border-slate-200 dark:border-slate-800 space-y-4 bg-white dark:bg-slate-900/70 shadow-sm">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
-              <div className="flex items-center gap-2">
-                <UserCheck className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
-                <h3 className="text-xs font-bold uppercase tracking-wider text-indigo-600 dark:text-indigo-400">
-                  Who Downloaded Files ({downloadActivities.length})
-                </h3>
-              </div>
-              {downloadActivities.length > 0 && (
-                <span className="text-xs text-slate-500 dark:text-slate-400 font-normal">
-                  Live download tracking
-                </span>
-              )}
-            </div>
-
-            {downloadActivities.length === 0 ? (
-              <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-950/40 border border-slate-200/80 dark:border-slate-800 text-center py-6">
-                <Download className="w-8 h-8 text-indigo-600/30 dark:text-indigo-400/40 mx-auto mb-2" />
-                <p className="text-xs font-semibold text-slate-800 dark:text-white">No files downloaded yet for this group</p>
-                <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">When a receiver downloads an individual file or ZIP, their card will appear here.</p>
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-60 overflow-y-auto pr-1">
-                {downloadActivities.map((act, index) => (
-                  <div 
-                    key={act.id || index}
-                    className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-950/80 border border-slate-200 dark:border-slate-800 hover:border-indigo-400 dark:hover:border-indigo-500/40 transition flex items-center justify-between gap-3 animate-fadeIn"
-                  >
-                    <div className="flex items-center gap-3 min-w-0">
-                      <div className="w-9 h-9 rounded-xl bg-indigo-50 dark:bg-indigo-500/10 border border-indigo-200 dark:border-indigo-500/20 text-indigo-700 dark:text-indigo-400 flex items-center justify-center font-bold text-xs flex-shrink-0">
-                        {act.receiverName ? act.receiverName[0].toUpperCase() : 'U'}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-60 overflow-y-auto pr-1">
+                  {downloadActivities.map((act, index) => (
+                    <div 
+                      key={act.id || index}
+                      className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-950/80 border border-slate-200 dark:border-slate-800 hover:border-indigo-400 dark:hover:border-indigo-500/40 transition flex items-center justify-between gap-3 animate-fadeIn"
+                    >
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className="w-9 h-9 rounded-xl bg-indigo-50 dark:bg-indigo-500/10 border border-indigo-200 dark:border-indigo-500/20 text-indigo-700 dark:text-indigo-400 flex items-center justify-center font-bold text-xs flex-shrink-0">
+                          {act.receiverName ? act.receiverName[0].toUpperCase() : 'U'}
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-xs font-semibold text-slate-900 dark:text-white truncate" title={act.receiverName}>
+                            {act.receiverName}
+                          </p>
+                          <p className="text-[11px] text-indigo-600 dark:text-indigo-300 font-mono truncate max-w-[180px]" title={act.fileName}>
+                            {act.fileName}
+                          </p>
+                        </div>
                       </div>
-                      <div className="min-w-0">
-                        <p className="text-xs font-semibold text-slate-900 dark:text-white truncate" title={act.receiverName}>
-                          {act.receiverName}
-                        </p>
-                        <p className="text-[11px] text-indigo-600 dark:text-indigo-300 font-mono truncate max-w-[180px]" title={act.fileName}>
-                          {act.fileName}
-                        </p>
-                      </div>
+
+                      <span className="text-[10px] font-mono text-slate-500 dark:text-slate-400 bg-white dark:bg-slate-900 px-2 py-1 rounded-lg border border-slate-200 dark:border-slate-800 flex-shrink-0">
+                        {act.timestamp}
+                      </span>
                     </div>
-
-                    <span className="text-[10px] font-mono text-slate-500 dark:text-slate-400 bg-white dark:bg-slate-900 px-2 py-1 rounded-lg border border-slate-200 dark:border-slate-800 flex-shrink-0">
-                      {act.timestamp}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            )}
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Shared Files List */}
