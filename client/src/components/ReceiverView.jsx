@@ -4,10 +4,11 @@ import {
   DownloadCloud, UploadCloud, Eye, Download, Archive, 
   FileText, Image as ImageIcon, Video, Music, File, 
   ArrowLeft, RefreshCw, AlertCircle, ShieldCheck, 
-  Wifi, FolderDown, Users, CheckCircle2, XCircle 
+  Wifi, FolderDown, Users, CheckCircle2, XCircle, Lock, Layers 
 } from 'lucide-react';
 import { formatBytes, getFileCategory, isPreviewable } from '../utils/fileHelpers';
 import { safeFetchJson, getApiBaseUrl } from '../utils/apiClient';
+import { useSessions } from '../context/SessionContext';
 import FilePreviewModal from './FilePreviewModal';
 import confetti from 'canvas-confetti';
 
@@ -18,6 +19,16 @@ export default function ReceiverView({
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const initialCode = searchParams.get('code') || '';
+  const groupParam = searchParams.get('group') || '';
+  const sessionIdParam = searchParams.get('sessionId') || '';
+
+  const { allActiveSessions = [], refreshActiveSessions } = useSessions();
+  const [targetSession, setTargetSession] = useState(() => {
+    if (groupParam) {
+      return { groupName: groupParam, sessionId: sessionIdParam };
+    }
+    return null;
+  });
 
   // PIN state (4 individual digits)
   const [pinDigits, setPinDigits] = useState(['', '', '', '']);
@@ -36,6 +47,18 @@ export default function ReceiverView({
 
   // Input refs for 4-digit boxes
   const inputRefs = [useRef(null), useRef(null), useRef(null), useRef(null)];
+
+  useEffect(() => {
+    if (groupParam) {
+      setTargetSession({ groupName: groupParam, sessionId: sessionIdParam });
+    }
+  }, [groupParam, sessionIdParam]);
+
+  useEffect(() => {
+    if (typeof refreshActiveSessions === 'function') {
+      refreshActiveSessions();
+    }
+  }, [refreshActiveSessions]);
 
   useEffect(() => {
     if (initialCode && /^\d{4}$/.test(initialCode)) {
@@ -166,6 +189,37 @@ export default function ReceiverView({
     setErrorMessage('');
 
     try {
+      // 1. Try verify-pin endpoint with optional target sessionId
+      const verifyRes = await safeFetchJson('/api/verify-pin', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          pin: codeToVerify,
+          sessionId: targetSession?.sessionId
+        })
+      });
+
+      if (verifyRes && verifyRes.success && verifyRes.room) {
+        setSessionData(verifyRes.room);
+        showToast(`Connected to group "${verifyRes.room.groupName}"!`, 'success');
+        confetti({ particleCount: 60, spread: 60, origin: { y: 0.7 } });
+        setIsConnecting(false);
+
+        if (socket) {
+          socket.emit('join_room', {
+            code: verifyRes.room.code,
+            role: 'receiver',
+            name: receiverName || 'Anonymous Receiver'
+          });
+        }
+        return;
+      }
+    } catch (verifyErr) {
+      console.warn('Verify-pin lookup:', verifyErr.message);
+    }
+
+    // 2. Direct lookup via room code
+    try {
       const data = await safeFetchJson(`/api/room/${codeToVerify}`);
       if (data && data.room) {
         setSessionData(data.room);
@@ -177,7 +231,6 @@ export default function ReceiverView({
         });
         setIsConnecting(false);
 
-        // Join the Socket.IO room so sender can see receiver and live updates
         if (socket) {
           socket.emit('join_room', {
             code: codeToVerify,
@@ -209,14 +262,14 @@ export default function ReceiverView({
             origin: { y: 0.7 }
           });
         } else {
-          setErrorMessage(response?.error || `No active sharing session found for code "${codeToVerify}".`);
+          setErrorMessage(response?.error || `Incorrect PIN code. Ask sender for the 4-digit PIN.`);
         }
       });
 
       setTimeout(() => {
         setIsConnecting(prev => {
           if (prev) {
-            setErrorMessage(`No response for code "${codeToVerify}". Ensure sender is online.`);
+            setErrorMessage(`Incorrect PIN code "${codeToVerify}". No active group found for this PIN.`);
             return false;
           }
           return false;
@@ -224,7 +277,7 @@ export default function ReceiverView({
       }, 5000);
     } else {
       setIsConnecting(false);
-      setErrorMessage('Could not connect to server or peer network.');
+      setErrorMessage('Incorrect PIN code. No active group found for this PIN.');
     }
   };
 
@@ -526,9 +579,29 @@ export default function ReceiverView({
           </div>
         )}
 
+        {/* Selected Target Group Indicator */}
+        {targetSession && (
+          <div className="flex items-center justify-between p-3 rounded-2xl bg-indigo-50/80 dark:bg-indigo-500/10 border border-indigo-200 dark:border-indigo-500/20 text-xs animate-fadeIn">
+            <div className="flex items-center gap-2">
+              <Lock className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
+              <span>Joining Group: <strong className="text-indigo-900 dark:text-white font-bold">{targetSession.groupName}</strong></span>
+              {targetSession.senderName && (
+                <span className="text-slate-500 dark:text-slate-400 font-normal">• by {targetSession.senderName}</span>
+              )}
+            </div>
+            <button
+              type="button"
+              onClick={() => setTargetSession(null)}
+              className="text-[11px] text-indigo-600 dark:text-indigo-400 hover:text-rose-600 font-semibold underline"
+            >
+              Clear
+            </button>
+          </div>
+        )}
+
         <div className="space-y-4">
           <label className="block text-center text-xs font-bold uppercase tracking-wider text-indigo-600 dark:text-indigo-400">
-            Enter 4-Digit PIN Code
+            Enter 4-Digit PIN Code {targetSession ? `for "${targetSession.groupName}"` : ''}
           </label>
 
           {/* 4 Large Digit Input Boxes */}
@@ -599,6 +672,91 @@ export default function ReceiverView({
           <span>Local network peer-to-peer connection</span>
         </div>
       </div>
+
+      {/* USER REQUESTED: Active Session Cards (shows active session name, but NOT the PIN) */}
+      {allActiveSessions.length > 0 && !sessionData && (
+        <div className="space-y-4 pt-2">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Layers className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-800 dark:text-slate-200">
+                Active Sessions on Local Network ({allActiveSessions.length})
+              </h3>
+            </div>
+            <span className="text-[11px] text-slate-500 dark:text-slate-400 font-normal">
+              PIN is private to sender • Select a group to enter PIN
+            </span>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+            {allActiveSessions.map((s) => {
+              const sessionKey = s.code || s.sessionId || s.groupName;
+              const isTargeted = targetSession && (targetSession.sessionId === s.sessionId || targetSession.groupName === s.groupName);
+
+              return (
+                <div
+                  key={sessionKey}
+                  onClick={() => {
+                    setTargetSession(s);
+                    setErrorMessage('');
+                    inputRefs[0]?.current?.focus();
+                  }}
+                  className={`p-4 rounded-2xl border transition-all duration-200 cursor-pointer flex flex-col justify-between gap-3 group relative overflow-hidden ${
+                    isTargeted
+                      ? 'bg-indigo-50/80 dark:bg-indigo-950/30 border-indigo-500 shadow-md shadow-indigo-500/10 scale-[1.01]'
+                      : 'bg-white dark:bg-slate-900/80 border-slate-200 dark:border-slate-800 hover:border-indigo-300 dark:hover:border-indigo-700 shadow-sm'
+                  }`}
+                >
+                  <div className="space-y-1.5">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-xs font-bold text-slate-900 dark:text-white truncate">
+                        {s.groupName}
+                      </span>
+                      {s.connected ? (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 text-[10px] font-bold">
+                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                          Live
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-rose-50 dark:bg-rose-500/10 text-rose-700 dark:text-rose-400 text-[10px] font-bold">
+                          Offline
+                        </span>
+                      )}
+                    </div>
+
+                    <p className="text-xs text-slate-600 dark:text-slate-300">
+                      Sender: <span className="font-semibold text-indigo-600 dark:text-indigo-400">{s.senderName}</span>
+                    </p>
+
+                    <p className="text-[11px] text-slate-400 dark:text-slate-500">
+                      {s.fileCount || 0} files • {formatBytes(s.totalSize || 0)}
+                    </p>
+                  </div>
+
+                  <div className="pt-2 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between gap-2">
+                    {/* Notice: PIN IS NOT SHOWN! Only security status */}
+                    <div className="flex items-center gap-1 text-[11px] font-medium text-slate-500 dark:text-slate-400">
+                      <Lock className="w-3 h-3 text-indigo-600 dark:text-indigo-400" />
+                      <span>PIN Protected</span>
+                    </div>
+
+                    <button
+                      type="button"
+                      className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition ${
+                        isTargeted
+                          ? 'bg-indigo-600 text-white shadow-sm'
+                          : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 group-hover:bg-indigo-600 group-hover:text-white'
+                      }`}
+                    >
+                      {isTargeted ? 'Selected' : 'Enter PIN'}
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

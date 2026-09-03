@@ -156,8 +156,42 @@ const io = new Server(server, {
   maxHttpBufferSize: 1e8 // 100MB
 });
 
+// Helper: return active sessions for discovery across same network WITHOUT revealing the secret 4-digit PIN!
+function getPublicActiveSessions() {
+  const list = [];
+  for (const [code, room] of rooms.entries()) {
+    if (!room.sessionId) {
+      room.sessionId = crypto.randomBytes(8).toString('hex');
+    }
+    list.push({
+      sessionId: room.sessionId,
+      groupName: room.groupName,
+      senderName: room.senderName || 'Anonymous Sender',
+      fileCount: room.files ? room.files.length : 0,
+      totalSize: room.files ? room.files.reduce((a, f) => a + (f.size || 0), 0) : 0,
+      createdAt: room.createdAt,
+      connected: true
+      // ⚠️ IMPORTANT: `code` / PIN is intentionally NOT included! PIN remains completely secret!
+    });
+  }
+  return list;
+}
+
+function broadcastPublicActiveSessions() {
+  io.emit('public_active_sessions', getPublicActiveSessions());
+}
+
 io.on('connection', (socket) => {
   console.log(`[Socket] New connection: ${socket.id}`);
+
+  // Send public active sessions list (session name & sender name, but NO PIN)
+  socket.emit('public_active_sessions', getPublicActiveSessions());
+
+  socket.on('get_public_active_sessions', (callback) => {
+    const list = getPublicActiveSessions();
+    if (typeof callback === 'function') callback({ success: true, sessions: list });
+    socket.emit('public_active_sessions', list);
+  });
 
   // Join a room with 4-digit code
   socket.on('join_room', ({ code, role, name }) => {
@@ -280,6 +314,7 @@ io.on('connection', (socket) => {
     if (targetSocketId) {
       io.to(targetSocketId).emit('room_state', payload);
     }
+    broadcastPublicActiveSessions();
   });
 
   // Receiver asks for room data via Socket.IO directly
@@ -400,6 +435,8 @@ app.post('/api/rooms/create', (req, res) => {
       fileCount: room.files.length
     }
   });
+
+  broadcastPublicActiveSessions();
 });
 
 // 3. Upload files to session
@@ -470,13 +507,88 @@ app.post('/api/upload', upload.array('files', 100), (req, res) => {
         files: room.files
       }
     });
+
+    broadcastPublicActiveSessions();
   } catch (error) {
     console.error('Upload error:', error);
     res.status(500).json({ success: false, error: error.message });
   }
 });
 
-// 4. Get room details by 4-digit code (for receiver)
+// 4. Get active sessions on local network (shows session name & sender name WITHOUT revealing PIN!)
+app.get('/api/active-sessions', (req, res) => {
+  res.json({
+    success: true,
+    sessions: getPublicActiveSessions()
+  });
+});
+
+// 5. Verify PIN for a session (receiver enters 4-digit PIN to unlock group)
+app.post('/api/verify-pin', (req, res) => {
+  const { pin, sessionId } = req.body || {};
+  const cleanPin = (pin || '').toString().trim();
+
+  if (!cleanPin || !/^\d{4}$/.test(cleanPin)) {
+    return res.status(400).json({ success: false, error: 'Please enter a valid 4-digit PIN code.' });
+  }
+
+  // Look up room either by sessionId or by PIN code
+  let targetRoom = null;
+  if (sessionId) {
+    for (const r of rooms.values()) {
+      if (r.sessionId === sessionId) {
+        targetRoom = r;
+        break;
+      }
+    }
+  }
+
+  if (targetRoom) {
+    if (targetRoom.code === cleanPin) {
+      return res.json({
+        success: true,
+        room: {
+          code: targetRoom.code,
+          groupName: targetRoom.groupName,
+          senderName: targetRoom.senderName,
+          createdAt: targetRoom.createdAt,
+          files: targetRoom.files,
+          receiversCount: targetRoom.receivers ? targetRoom.receivers.length : 0,
+          downloads: targetRoom.downloads || []
+        }
+      });
+    } else {
+      return res.status(401).json({
+        success: false,
+        error: `Incorrect PIN code for group "${targetRoom.groupName}". Please ask sender for the 4-digit PIN.`
+      });
+    }
+  }
+
+  // Fallback lookup by PIN code directly
+  const roomByCode = rooms.get(cleanPin);
+  if (roomByCode) {
+    return res.json({
+      success: true,
+      room: {
+        code: roomByCode.code,
+        groupName: roomByCode.groupName,
+        senderName: roomByCode.senderName,
+        createdAt: roomByCode.createdAt,
+        files: roomByCode.files,
+        receiversCount: roomByCode.receivers ? roomByCode.receivers.length : 0,
+        downloads: roomByCode.downloads || []
+      }
+    });
+  }
+
+  return res.status(404).json({
+    success: false,
+    error: `Incorrect PIN code "${cleanPin}". No active sharing group found for this PIN.`
+  });
+});
+
+// 6. Get room details by 4-digit code (for receiver)
 app.get('/api/room/:code', (req, res) => {
   const code = req.params.code?.trim();
   if (!code || !/^\d{4}$/.test(code)) {
@@ -678,6 +790,7 @@ app.delete('/api/room/:code', (req, res) => {
       }
     }
     rooms.delete(code);
+    broadcastPublicActiveSessions();
   }
 
   res.json({ success: true, message: 'Session closed.' });

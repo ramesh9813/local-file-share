@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { NavLink, Link, useNavigate, useLocation } from 'react-router-dom';
 import { 
   UploadCloud, DownloadCloud, Home, QrCode, Wifi, Menu, X, 
-  Sun, Moon, Layers, Trash2, ExternalLink, PlusCircle, Copy, Check 
+  Sun, Moon, Layers, Trash2, ExternalLink, PlusCircle, Copy, Check, Lock 
 } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 import { useSessions } from '../context/SessionContext';
@@ -56,12 +56,12 @@ export default function Header({ networkInfo, onOpenQr }) {
         : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-850'
     }`;
 
-  const handleOpenSession = (code) => {
-    if (location.pathname === '/receive') {
-      navigate(`/receive?code=${code}`);
-    } else {
-      setSelectedCode(code);
+  const handleOpenSession = (s) => {
+    if (s.isOwner) {
+      setSelectedCode(s.code);
       navigate('/send');
+    } else {
+      navigate(`/receive?group=${encodeURIComponent(s.groupName)}&sessionId=${s.sessionId || ''}`);
     }
     setSessionsDropdownOpen(false);
   };
@@ -193,11 +193,12 @@ export default function Header({ networkInfo, onOpenQr }) {
                     allActiveSessions.map((s) => {
                       const totalBytes = s.totalSize || 0;
                       const isSelected = selectedCode === s.code;
+                      const sessionKey = s.code || s.sessionId || s.groupName;
 
                       return (
                         <div
-                          key={s.code}
-                          onClick={() => handleOpenSession(s.code)}
+                          key={sessionKey}
+                          onClick={() => handleOpenSession(s)}
                           className={`p-3 rounded-xl border transition cursor-pointer flex items-center justify-between gap-3 ${
                             isSelected
                               ? 'bg-indigo-50/70 dark:bg-indigo-500/10 border-indigo-300 dark:border-indigo-500/40'
@@ -229,7 +230,7 @@ export default function Header({ networkInfo, onOpenQr }) {
                           </div>
 
                           <div className="flex flex-col items-end gap-1.5 flex-shrink-0">
-                            {/* USER REQUESTED: Icon & badge showing connected (green) or not connected (red) */}
+                            {/* Connection status badge (Green for connected) */}
                             {s.connected ? (
                               <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/20 text-emerald-700 dark:text-emerald-400 text-[10px] font-bold">
                                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
@@ -243,29 +244,47 @@ export default function Header({ networkInfo, onOpenQr }) {
                             )}
 
                             <div className="flex items-center gap-1.5">
-                              {/* PIN Pill with Copy */}
-                              <button
-                                onClick={(e) => handleCopyPin(e, s.code)}
-                                className="px-2 py-0.5 rounded-lg bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-indigo-400 font-mono font-bold text-[11px] text-indigo-700 dark:text-indigo-300 flex items-center gap-1"
-                                title="Copy 4-Digit PIN"
-                              >
-                                <span>{s.code}</span>
-                                {copiedCode === s.code ? (
-                                  <Check className="w-3 h-3 text-emerald-500" />
-                                ) : (
-                                  <Copy className="w-3 h-3 text-slate-400" />
-                                )}
-                              </button>
+                              {/* USER REQUESTED: Sender sees their PIN; other devices do NOT see PIN! */}
+                              {s.isOwner ? (
+                                <>
+                                  <button
+                                    onClick={(e) => handleCopyPin(e, s.code)}
+                                    className="px-2 py-0.5 rounded-lg bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-indigo-400 font-mono font-bold text-[11px] text-indigo-700 dark:text-indigo-300 flex items-center gap-1"
+                                    title="Copy 4-Digit PIN"
+                                  >
+                                    <span>{s.code}</span>
+                                    {copiedCode === s.code ? (
+                                      <Check className="w-3 h-3 text-emerald-500" />
+                                    ) : (
+                                      <Copy className="w-3 h-3 text-slate-400" />
+                                    )}
+                                  </button>
 
-                              {/* Close Session Button (if sender is owner) */}
-                              {s.isOwner && (
-                                <button
-                                  onClick={(e) => handleCloseSessionClick(e, s.code, s.groupName)}
-                                  className="p-1 rounded-lg hover:bg-rose-50 dark:hover:bg-rose-500/20 text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 transition"
-                                  title="Close this sending session"
-                                >
-                                  <Trash2 className="w-3 h-3 text-indigo-600 dark:text-indigo-400" />
-                                </button>
+                                  <button
+                                    onClick={(e) => handleCloseSessionClick(e, s.code, s.groupName)}
+                                    className="p-1 rounded-lg hover:bg-rose-50 dark:hover:bg-rose-500/20 text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 transition"
+                                    title="Close this sending session"
+                                  >
+                                    <Trash2 className="w-3 h-3 text-indigo-600 dark:text-indigo-400" />
+                                  </button>
+                                </>
+                              ) : (
+                                /* Other devices on network see "PIN Protected" badge and Enter PIN button */
+                                <div className="flex items-center gap-1.5">
+                                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-[10px] font-semibold text-slate-600 dark:text-slate-400">
+                                    <Lock className="w-2.5 h-2.5 text-indigo-600 dark:text-indigo-400" />
+                                    <span>PIN Protected</span>
+                                  </span>
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleOpenSession(s);
+                                    }}
+                                    className="px-2 py-0.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-[10px] font-semibold transition shadow-sm"
+                                  >
+                                    Enter PIN
+                                  </button>
+                                </div>
                               )}
                             </div>
                           </div>
