@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: airlink-file-share
+    name: airlnk
     runtime: static
     buildCommand: cd client && npm install && npm run build
     staticPublishPath: client/dist
