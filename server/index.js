@@ -537,7 +537,7 @@ app.get('/api/download/:code/:fileId', (req, res) => {
   });
 });
 
-// 6. Preview individual file inline (for images, audio, video, text, PDF)
+// 6. Preview individual file inline (for ANY file extension: images, audio, video, text, code, pdf, binary)
 app.get('/api/preview/:code/:fileId', (req, res) => {
   const { code, fileId } = req.params;
   const room = rooms.get(code);
@@ -556,10 +556,68 @@ app.get('/api/preview/:code/:fileId', (req, res) => {
     return res.status(404).send('File no longer exists on disk.');
   }
 
-  res.setHeader('Content-Type', fileInfo.mimeType);
+  const stat = fs.statSync(filePath);
+  const fileSize = stat.size;
+  const ext = path.extname(fileInfo.name).toLowerCase().replace('.', '');
+
+  // Detect MIME type accurately for any extension
+  let contentType = fileInfo.mimeType;
+  const textExtensions = [
+    'txt', 'md', 'markdown', 'json', 'csv', 'tsv', 'js', 'jsx', 'ts', 'tsx', 'py', 'java', 'c', 'cpp', 
+    'h', 'hpp', 'cs', 'go', 'rs', 'php', 'rb', 'sql', 'sh', 'bash', 'zsh', 'yaml', 'yml', 'xml', 'log', 
+    'ini', 'conf', 'config', 'env', 'toml', 'css', 'scss', 'sass', 'less', 'html', 'htm', 'vue', 'svelte'
+  ];
+  if (textExtensions.includes(ext)) {
+    contentType = 'text/plain; charset=utf-8';
+  } else if (ext === 'pdf') {
+    contentType = 'application/pdf';
+  } else if (['jpg', 'jpeg'].includes(ext)) {
+    contentType = 'image/jpeg';
+  } else if (ext === 'png') {
+    contentType = 'image/png';
+  } else if (ext === 'webp') {
+    contentType = 'image/webp';
+  } else if (ext === 'svg') {
+    contentType = 'image/svg+xml';
+  } else if (['mp4', 'm4v'].includes(ext)) {
+    contentType = 'video/mp4';
+  } else if (ext === 'webm') {
+    contentType = 'video/webm';
+  } else if (ext === 'mp3') {
+    contentType = 'audio/mpeg';
+  } else if (ext === 'wav') {
+    contentType = 'audio/wav';
+  } else if (ext === 'ogg') {
+    contentType = 'audio/ogg';
+  } else if (!contentType) {
+    contentType = 'application/octet-stream';
+  }
+
+  res.setHeader('Content-Type', contentType);
   res.setHeader('Content-Disposition', `inline; filename="${encodeURIComponent(fileInfo.name)}"`);
-  const stream = fs.createReadStream(filePath);
-  stream.pipe(res);
+  res.setHeader('Accept-Ranges', 'bytes');
+
+  // Support HTTP Range requests for video/audio seeking
+  const range = req.headers.range;
+  if (range) {
+    const parts = range.replace(/bytes=/, '').split('-');
+    const start = parseInt(parts[0], 10);
+    const end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1;
+    const chunksize = (end - start) + 1;
+    const fileStream = fs.createReadStream(filePath, { start, end });
+
+    res.writeHead(206, {
+      'Content-Range': `bytes ${start}-${end}/${fileSize}`,
+      'Accept-Ranges': 'bytes',
+      'Content-Length': chunksize,
+      'Content-Type': contentType
+    });
+    fileStream.pipe(res);
+  } else {
+    res.setHeader('Content-Length', fileSize);
+    const stream = fs.createReadStream(filePath);
+    stream.pipe(res);
+  }
 });
 
 // 7. Download ALL files as a ZIP archive
