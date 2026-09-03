@@ -1,0 +1,22 @@
+{
+  "name": "local-file-share",
+  "version": "1.0.0",
+  "description": "Professional Local Network File Sharing Application built with React, Vite, Node.js & Socket.io",
+  "main": "server/index.js",
+  "scripts": {
+    "start": "node server/index.js",
+    "server": "node server/index.js",
+    "build": "cd client && ESBUILD_BINARY_PATH=/tmp/esbuild node node_modules/vite/bin/vite.js build",
+    "client:dev": "cd client && ESBUILD_BINARY_PATH=/tmp/esbuild node node_modules/vite/bin/vite.js --host 0.0.0.0 --port 3000"
+  },
+  "keywords": [
+    "file-sharing",
+    "lan",
+    "local-network",
+    "react",
+    "socketio",
+    "p2p"
+  ],
+  "author": "",
+  "license": "MIT"
+}

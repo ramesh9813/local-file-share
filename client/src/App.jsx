@@ -1,0 +1,141 @@
+import React, { useState, useEffect } from 'react';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { io } from 'socket.io-client';
+import { 
+  AlertCircle, CheckCircle, Info, Sparkles 
+} from 'lucide-react';
+import Header from './components/Header';
+import Footer from './components/Footer';
+import LandingPage from './components/LandingPage';
+import SenderView from './components/SenderView';
+import ReceiverView from './components/ReceiverView';
+import QrModal from './components/QrModal';
+
+export default function App() {
+  const [networkInfo, setNetworkInfo] = useState(null);
+  const [isQrOpen, setIsQrOpen] = useState(false);
+  const [socket, setSocket] = useState(null);
+  const [toasts, setToasts] = useState([]);
+
+  // Toast notification system
+  const showToast = (message, type = 'info') => {
+    const id = Date.now() + Math.random();
+    setToasts(prev => [...prev, { id, message, type }]);
+    setTimeout(() => {
+      setToasts(prev => prev.filter(t => t.id !== id));
+    }, 4000);
+  };
+
+  // Fetch Local Network Information
+  useEffect(() => {
+    fetch('/api/network-info')
+      .then(res => res.json())
+      .then(data => {
+        if (data.success) {
+          setNetworkInfo(data);
+        }
+      })
+      .catch(err => {
+        console.error('Failed to get network info:', err);
+      });
+  }, []);
+
+  // Initialize Socket.IO connection
+  useEffect(() => {
+    const newSocket = io({
+      transports: ['websocket', 'polling'],
+      reconnectionAttempts: 10,
+      reconnectionDelay: 1000
+    });
+
+    newSocket.on('connect', () => {
+      console.log('Connected to local LAN Socket server:', newSocket.id);
+    });
+
+    newSocket.on('connect_error', (error) => {
+      console.warn('Socket connection error:', error.message);
+    });
+
+    setSocket(newSocket);
+
+    return () => {
+      newSocket.disconnect();
+    };
+  }, []);
+
+  return (
+    <BrowserRouter>
+      <div className="min-h-screen flex flex-col bg-[#080c14] text-slate-100 font-['Plus_Jakarta_Sans',sans-serif] selection:bg-indigo-600 selection:text-white relative">
+        {/* Header with React Router Navigation */}
+        <Header 
+          networkInfo={networkInfo} 
+          onOpenQr={() => setIsQrOpen(true)} 
+        />
+
+        {/* Main Content Area Routed via React Router */}
+        <main className="flex-1 max-w-6xl w-full mx-auto px-4 sm:px-8 py-6">
+          <Routes>
+            <Route 
+              path="/" 
+              element={
+                <LandingPage 
+                  networkInfo={networkInfo} 
+                  onOpenQr={() => setIsQrOpen(true)} 
+                />
+              } 
+            />
+            <Route 
+              path="/send" 
+              element={
+                <SenderView 
+                  socket={socket} 
+                  networkInfo={networkInfo} 
+                  onOpenQr={() => setIsQrOpen(true)} 
+                  showToast={showToast} 
+                />
+              } 
+            />
+            <Route 
+              path="/receive" 
+              element={
+                <ReceiverView 
+                  socket={socket} 
+                  showToast={showToast} 
+                />
+              } 
+            />
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </main>
+
+        {/* Suitable Footer */}
+        <Footer 
+          networkInfo={networkInfo} 
+          onOpenQr={() => setIsQrOpen(true)} 
+        />
+
+        {/* QR Code Modal */}
+        <QrModal 
+          isOpen={isQrOpen}
+          onClose={() => setIsQrOpen(false)}
+          networkInfo={networkInfo}
+        />
+
+        {/* Toast Alerts Container */}
+        <div className="fixed bottom-6 right-6 z-50 flex flex-col gap-2.5 max-w-sm pointer-events-none">
+          {toasts.map(t => (
+            <div
+              key={t.id}
+              className="pointer-events-auto flex items-center gap-3 px-4 py-3 rounded-2xl shadow-xl text-xs font-semibold backdrop-blur-md border border-slate-800 bg-slate-900/95 text-slate-200 animate-fadeIn transition-all"
+            >
+              {t.type === 'error' && <AlertCircle className="w-4 h-4 text-indigo-400 flex-shrink-0" />}
+              {t.type === 'success' && <CheckCircle className="w-4 h-4 text-indigo-400 flex-shrink-0" />}
+              {t.type === 'info' && <Info className="w-4 h-4 text-indigo-400 flex-shrink-0" />}
+              <span className="leading-snug">{t.message}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </BrowserRouter>
+  );
+}
