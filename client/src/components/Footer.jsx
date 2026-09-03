@@ -136,18 +136,6 @@ export default function Footer({ networkInfo, onOpenQr }) {
             </div>
           </div>
         </div>
-
-        {/* Bottom Copyright & Disclaimer */}
-        <div className="mt-8 pt-6 border-t border-slate-200 dark:border-slate-800/80 flex flex-col sm:flex-row items-center justify-between gap-3 text-center sm:text-left text-[11px] text-slate-500 dark:text-slate-400">
-          <p>© {new Date().getFullYear()} AirLink LAN. Local network data transfers remain private within your local network.</p>
-          <div className="flex items-center gap-4 text-slate-500 dark:text-slate-400">
-            <span>Light & Dark Mode</span>
-            <span>•</span>
-            <span>React Router</span>
-            <span>•</span>
-            <span>Socket.IO</span>
-          </div>
-        </div>
       </div>
     </footer>
   );
