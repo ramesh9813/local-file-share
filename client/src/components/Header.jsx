@@ -268,8 +268,25 @@ export default function Header({ networkInfo, onOpenQr }) {
                                     <Trash2 className="w-3 h-3 text-indigo-600 dark:text-indigo-400" />
                                   </button>
                                 </>
+                              ) : s.isReceiverConnected ? (
+                                /* USER REQUESTED: ONCE CONNECTED DO NOT SHOW ENTER PIN TAG IN RECEIVER ACTIVE SESSION CARD */
+                                <div className="flex items-center gap-1.5">
+                                  <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-500/15 border border-emerald-300 dark:border-emerald-500/30 text-[10px] font-bold text-emerald-700 dark:text-emerald-400">
+                                    <Check className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />
+                                    <span>Connected</span>
+                                  </span>
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleOpenSession(s);
+                                    }}
+                                    className="px-2.5 py-1 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-[10px] font-semibold transition shadow-sm"
+                                  >
+                                    View Files
+                                  </button>
+                                </div>
                               ) : (
-                                /* Other devices on network see "PIN Protected" badge and Enter PIN button */
+                                /* Other devices on network NOT CONNECTED YET: see "PIN Protected" badge and Enter PIN button */
                                 <div className="flex items-center gap-1.5">
                                   <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-[10px] font-semibold text-slate-600 dark:text-slate-400">
                                     <Lock className="w-2.5 h-2.5 text-indigo-600 dark:text-indigo-400" />

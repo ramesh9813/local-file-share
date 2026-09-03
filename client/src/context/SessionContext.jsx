@@ -137,6 +137,48 @@ export function SessionProvider({ children }) {
     refreshPublicSessions();
   };
 
+  // Track sessions that this receiver has successfully unlocked with the correct PIN
+  const [unlockedSessions, setUnlockedSessions] = useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem('localshare_unlocked_sessions') || '[]');
+    } catch {
+      return [];
+    }
+  });
+
+  const markSessionUnlocked = useCallback((room) => {
+    if (!room) return;
+    setUnlockedSessions(prev => {
+      const exists = prev.some(u => 
+        (u.sessionId && room.sessionId && u.sessionId === room.sessionId) ||
+        (u.groupName && room.groupName && u.groupName === room.groupName) ||
+        (u.code && room.code && u.code === room.code)
+      );
+      if (exists) return prev;
+      const next = [...prev, {
+        code: room.code,
+        groupName: room.groupName,
+        sessionId: room.sessionId,
+        senderName: room.senderName,
+        unlockedAt: Date.now()
+      }];
+      try {
+        localStorage.setItem('localshare_unlocked_sessions', JSON.stringify(next));
+      } catch {}
+      return next;
+    });
+  }, []);
+
+  const clearUnlockedSession = useCallback((identifier) => {
+    setUnlockedSessions(prev => {
+      const next = prev.filter(u => u.code !== identifier && u.sessionId !== identifier && u.groupName !== identifier);
+      try {
+        localStorage.setItem('localshare_unlocked_sessions', JSON.stringify(next));
+      } catch {}
+      return next;
+    });
+  }, []);
+
   // Build combined list for UI:
   // 1. Own sessions created on this device (shows PIN with copy button)
   // 2. Network sessions from other devices (shows Session Name & Sender, HIDES PIN)
@@ -148,22 +190,33 @@ export function SessionProvider({ children }) {
       ...s,
       isOwner: true,
       connected: sessionStatuses[s.code] !== false,
-      pinProtected: false
+      pinProtected: false,
+      isReceiverConnected: false
     })),
     // Network sessions from other devices (PIN is hidden!)
     ...networkSessions
       .filter(ns => !ownGroupNames.has(ns.groupName))
-      .map(ns => ({
-        sessionId: ns.sessionId,
-        groupName: ns.groupName,
-        senderName: ns.senderName,
-        fileCount: ns.fileCount,
-        totalSize: ns.totalSize,
-        connected: true,
-        isOwner: false,
-        code: null, // 🔒 HIDDEN PIN!
-        pinProtected: true
-      }))
+      .map(ns => {
+        const matchingUnlocked = unlockedSessions.find(u => 
+          (u.sessionId && ns.sessionId && u.sessionId === ns.sessionId) ||
+          (u.groupName && ns.groupName && u.groupName === ns.groupName)
+        );
+        const isReceiverConnected = !!matchingUnlocked;
+
+        return {
+          sessionId: ns.sessionId,
+          groupName: ns.groupName,
+          senderName: ns.senderName,
+          fileCount: ns.fileCount,
+          totalSize: ns.totalSize,
+          // If receiver already entered correct PIN: connected: true! Otherwise connected: false until PIN is entered
+          connected: isReceiverConnected,
+          isOwner: false,
+          code: matchingUnlocked ? matchingUnlocked.code : null, // only available if unlocked
+          pinProtected: !isReceiverConnected,
+          isReceiverConnected
+        };
+      })
   ];
 
   return (
@@ -177,6 +230,9 @@ export function SessionProvider({ children }) {
         addSession,
         updateSession,
         closeSession,
+        markSessionUnlocked,
+        clearUnlockedSession,
+        unlockedSessions,
         refreshActiveSessions: () => {
           checkSessionStatus();
           refreshPublicSessions();
