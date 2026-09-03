@@ -202,13 +202,19 @@ io.on('connection', (socket) => {
     const room = rooms.get(code);
 
     if (role === 'receiver') {
+      const cleanReceiverName = (name || '').trim();
+      if (!cleanReceiverName) {
+        socket.emit('error_message', { message: 'Receiver name is required before connecting.' });
+        return;
+      }
+
       let isFirstJoin = true;
       if (room) {
-        const existing = room.receivers.find(r => r.socketId === socket.id || r.name === name);
+        const existing = room.receivers.find(r => r.socketId === socket.id || r.name === cleanReceiverName);
         if (!existing) {
           room.receivers.push({
             socketId: socket.id,
-            name: name || 'Anonymous Receiver',
+            name: cleanReceiverName,
             joinedAt: new Date().toISOString()
           });
         } else {
@@ -218,10 +224,10 @@ io.on('connection', (socket) => {
 
       // Only notify other clients (sender) in room if this socket genuinely joined for the first time
       if (isFirstJoin) {
-        console.log(`[Socket] Receiver "${name}" (${socket.id}) joined room: ${code}`);
+        console.log(`[Socket] Receiver "${cleanReceiverName}" (${socket.id}) joined room: ${code}`);
         socket.to(code).emit('receiver_joined', {
           code,
-          receiverName: name || 'Anonymous Receiver',
+          receiverName: cleanReceiverName,
           socketId: socket.id,
           receiversCount: room ? room.receivers.length : 1
         });
@@ -525,7 +531,13 @@ app.get('/api/active-sessions', (req, res) => {
 
 // 5. Verify PIN for a session (receiver enters 4-digit PIN to unlock group)
 app.post('/api/verify-pin', (req, res) => {
-  const { pin, sessionId } = req.body || {};
+  const { pin, sessionId, receiverName } = req.body || {};
+  const cleanReceiverName = (receiverName || '').trim();
+
+  if (!cleanReceiverName) {
+    return res.status(400).json({ success: false, error: 'Receiver name is required before connecting. Please enter your name.' });
+  }
+
   const cleanPin = (pin || '').toString().trim();
 
   if (!cleanPin || !/^\d{4}$/.test(cleanPin)) {

@@ -4,7 +4,7 @@ import {
   DownloadCloud, UploadCloud, Eye, Download, Archive, 
   FileText, Image as ImageIcon, Video, Music, File, 
   ArrowLeft, RefreshCw, AlertCircle, ShieldCheck, 
-  Wifi, FolderDown, Users, CheckCircle2, XCircle, Lock, Layers 
+  Wifi, FolderDown, Users, CheckCircle2, XCircle, Lock, Layers, User 
 } from 'lucide-react';
 import { formatBytes, getFileCategory, isPreviewable } from '../utils/fileHelpers';
 import { safeFetchJson, getApiBaseUrl } from '../utils/apiClient';
@@ -45,8 +45,9 @@ export default function ReceiverView({
   // Downloading all state
   const [isDownloadingAll, setIsDownloadingAll] = useState(false);
 
-  // Input refs for 4-digit boxes
+  // Input refs for 4-digit boxes & receiver name
   const inputRefs = [useRef(null), useRef(null), useRef(null), useRef(null)];
+  const nameInputRef = useRef(null);
 
   useEffect(() => {
     if (groupParam) {
@@ -64,7 +65,13 @@ export default function ReceiverView({
     if (initialCode && /^\d{4}$/.test(initialCode)) {
       const digits = initialCode.split('');
       setPinDigits(digits);
-      handleConnect(initialCode);
+      const savedName = localStorage.getItem('localshare_recv_name') || '';
+      if (savedName.trim()) {
+        handleConnect(initialCode);
+      } else {
+        setErrorMessage('Please enter your name below to connect to this session.');
+        setTimeout(() => nameInputRef.current?.focus(), 150);
+      }
     }
   }, [initialCode]);
 
@@ -150,6 +157,12 @@ export default function ReceiverView({
       const nextIndex = Math.min(pasted.length, 3);
       inputRefs[nextIndex].current?.focus();
       if (pasted.length === 4) {
+        const cleanName = (receiverName || '').trim();
+        if (!cleanName) {
+          setErrorMessage('Receiver Name Required: Please enter your name first before connecting.');
+          setTimeout(() => nameInputRef.current?.focus(), 150);
+          return;
+        }
         handleConnect(pasted.join(''));
       }
       return;
@@ -166,6 +179,12 @@ export default function ReceiverView({
 
     const full = newDigits.join('');
     if (full.length === 4) {
+      const cleanName = (receiverName || '').trim();
+      if (!cleanName) {
+        setErrorMessage('Receiver Name Required: Please enter your name first before connecting.');
+        setTimeout(() => nameInputRef.current?.focus(), 150);
+        return;
+      }
       handleConnect(full);
     }
   };
@@ -179,6 +198,13 @@ export default function ReceiverView({
   const getFullPin = () => pinDigits.join('');
 
   const handleConnect = async (customCode) => {
+    const cleanName = (receiverName || '').trim();
+    if (!cleanName) {
+      setErrorMessage('Receiver Name Required: You must enter your name before connecting.');
+      setTimeout(() => nameInputRef.current?.focus(), 100);
+      return;
+    }
+
     const codeToVerify = customCode || getFullPin();
     if (!/^\d{4}$/.test(codeToVerify)) {
       setErrorMessage('Please enter a complete 4-digit PIN.');
@@ -189,19 +215,20 @@ export default function ReceiverView({
     setErrorMessage('');
 
     try {
-      // 1. Try verify-pin endpoint with optional target sessionId
+      // 1. Try verify-pin endpoint with receiverName and optional target sessionId
       const verifyRes = await safeFetchJson('/api/verify-pin', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           pin: codeToVerify,
-          sessionId: targetSession?.sessionId
+          sessionId: targetSession?.sessionId,
+          receiverName: cleanName
         })
       });
 
       if (verifyRes && verifyRes.success && verifyRes.room) {
         setSessionData(verifyRes.room);
-        showToast(`Connected to group "${verifyRes.room.groupName}"!`, 'success');
+        showToast(`Connected to group "${verifyRes.room.groupName}" as ${cleanName}!`, 'success');
         confetti({ particleCount: 60, spread: 60, origin: { y: 0.7 } });
         setIsConnecting(false);
 
@@ -209,9 +236,13 @@ export default function ReceiverView({
           socket.emit('join_room', {
             code: verifyRes.room.code,
             role: 'receiver',
-            name: receiverName || 'Anonymous Receiver'
+            name: cleanName
           });
         }
+        return;
+      } else if (verifyRes && verifyRes.error) {
+        setErrorMessage(verifyRes.error);
+        setIsConnecting(false);
         return;
       }
     } catch (verifyErr) {
@@ -235,7 +266,7 @@ export default function ReceiverView({
           socket.emit('join_room', {
             code: codeToVerify,
             role: 'receiver',
-            name: receiverName || 'Anonymous Receiver'
+            name: cleanName
           });
         }
         return;
@@ -248,7 +279,7 @@ export default function ReceiverView({
       socket.emit('join_room', {
         code: codeToVerify,
         role: 'receiver',
-        name: receiverName || 'Anonymous Receiver'
+        name: cleanName
       });
 
       socket.emit('get_room_data', { code: codeToVerify }, (response) => {
@@ -566,15 +597,26 @@ export default function ReceiverView({
               NOT CONNECTED
             </span>
           </div>
+        ) : !receiverName.trim() ? (
+          <div className="flex items-center justify-between p-3.5 rounded-2xl bg-rose-50/70 dark:bg-rose-950/20 border border-rose-200 dark:border-rose-500/20 text-rose-700 dark:text-rose-400 text-xs font-semibold">
+            <div className="flex items-center gap-2">
+              <span className="w-2.5 h-2.5 rounded-full bg-rose-500"></span>
+              <span className="font-bold">Status: Not Connected</span>
+              <span className="font-normal text-slate-500 dark:text-slate-400">• Your name is required before connecting</span>
+            </div>
+            <span className="px-2 py-0.5 rounded-full bg-rose-100 dark:bg-rose-500/20 text-rose-800 dark:text-rose-300 text-[10px] font-bold">
+              NAME REQUIRED
+            </span>
+          </div>
         ) : (
           <div className="flex items-center justify-between p-3.5 rounded-2xl bg-rose-50/70 dark:bg-rose-950/20 border border-rose-200 dark:border-rose-500/20 text-rose-700 dark:text-rose-400 text-xs font-semibold">
             <div className="flex items-center gap-2">
               <span className="w-2.5 h-2.5 rounded-full bg-rose-500"></span>
               <span className="font-bold">Status: Not Connected</span>
-              <span className="font-normal text-slate-500 dark:text-slate-400">• Enter correct 4-digit PIN to connect</span>
+              <span className="font-normal text-slate-500 dark:text-slate-400">• Enter correct 4-digit PIN to connect as {receiverName}</span>
             </div>
             <span className="px-2 py-0.5 rounded-full bg-rose-100 dark:bg-rose-500/20 text-rose-800 dark:text-rose-300 text-[10px] font-bold">
-              NOT CONNECTED
+              ENTER PIN
             </span>
           </div>
         )}
@@ -599,6 +641,48 @@ export default function ReceiverView({
           </div>
         )}
 
+        {/* STEP 1: Receiver Name (Explicitly Required Before Connecting) */}
+        <div className="p-4 rounded-2xl bg-slate-50/90 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 space-y-2 text-left">
+          <div className="flex items-center justify-between">
+            <label className="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
+              <User className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
+              <span>Your Name</span>
+              <span className="text-rose-500 font-bold">*</span>
+            </label>
+            {receiverName.trim() ? (
+              <span className="text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
+                <CheckCircle2 className="w-3 h-3" /> Ready
+              </span>
+            ) : (
+              <span className="text-[10px] font-bold text-rose-600 dark:text-rose-400 bg-rose-100 dark:bg-rose-500/20 px-2 py-0.5 rounded-full uppercase tracking-wider">
+                Required to Connect
+              </span>
+            )}
+          </div>
+
+          <input
+            ref={nameInputRef}
+            type="text"
+            placeholder="Enter your name (e.g. Sarah, David)"
+            value={receiverName}
+            onChange={(e) => {
+              setReceiverName(e.target.value);
+              if (e.target.value.trim() && errorMessage.toLowerCase().includes('name')) {
+                setErrorMessage('');
+              }
+            }}
+            className={`w-full px-4 py-2.5 rounded-xl bg-white dark:bg-slate-900 border text-sm font-medium transition focus:outline-none ${
+              !receiverName.trim() && errorMessage.toLowerCase().includes('name')
+                ? 'border-rose-500 ring-2 ring-rose-500/20 text-rose-900 dark:text-rose-100'
+                : 'border-slate-300 dark:border-slate-800 text-slate-900 dark:text-white focus:border-indigo-600'
+            }`}
+          />
+          <p className="text-[11px] text-slate-500 dark:text-slate-400 font-normal">
+            Required: The sender will see this name when you connect and download files.
+          </p>
+        </div>
+
+        {/* STEP 2: 4-Digit PIN Code */}
         <div className="space-y-4">
           <label className="block text-center text-xs font-bold uppercase tracking-wider text-indigo-600 dark:text-indigo-400">
             Enter 4-Digit PIN Code {targetSession ? `for "${targetSession.groupName}"` : ''}
@@ -626,20 +710,6 @@ export default function ReceiverView({
             ))}
           </div>
 
-          {/* Receiver Display Name */}
-          <div className="pt-2">
-            <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
-              Your Name <span className="text-slate-400 font-normal">(shown to sender when you connect or download)</span>
-            </label>
-            <input
-              type="text"
-              placeholder="e.g. Sarah, iPhone 15"
-              value={receiverName}
-              onChange={(e) => setReceiverName(e.target.value)}
-              className="w-full px-4 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 text-sm text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-600 focus:outline-none focus:border-indigo-600 transition font-normal"
-            />
-          </div>
-
           {errorMessage && (
             <div className="flex items-center gap-2 p-3 rounded-xl bg-rose-50 dark:bg-slate-950 border border-rose-200 dark:border-rose-500/40 text-xs text-rose-700 dark:text-rose-400 animate-fadeIn">
               <AlertCircle className="w-4 h-4 text-rose-600 dark:text-rose-400 flex-shrink-0" />
@@ -651,13 +721,23 @@ export default function ReceiverView({
         {/* Submit Button */}
         <button
           onClick={() => handleConnect()}
-          disabled={isConnecting || getFullPin().length !== 4}
+          disabled={isConnecting || !receiverName.trim() || getFullPin().length !== 4}
           className="w-full py-3.5 px-6 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-sm shadow-md shadow-indigo-600/20 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
         >
           {isConnecting ? (
             <>
               <RefreshCw className="w-4 h-4 animate-spin text-white" />
               <span>Connecting & Verifying PIN...</span>
+            </>
+          ) : !receiverName.trim() ? (
+            <>
+              <User className="w-4 h-4 text-white" />
+              <span>Enter Your Name to Connect</span>
+            </>
+          ) : getFullPin().length !== 4 ? (
+            <>
+              <Lock className="w-4 h-4 text-white" />
+              <span>Enter 4-Digit PIN Code</span>
             </>
           ) : (
             <>
