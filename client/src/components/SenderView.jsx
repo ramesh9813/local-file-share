@@ -116,7 +116,7 @@ export default function SenderView({
 
       if (currentSession && currentSession.code === sessionCode) {
         setConnectedReceivers(prev => {
-          if (!prev.some(r => r.socketId === data.socketId)) {
+          if (!prev.some(r => r.socketId === data.socketId || r.name === data.receiverName)) {
             return [...prev, { socketId: data.socketId, name: data.receiverName }];
           }
           return prev;
@@ -137,19 +137,36 @@ export default function SenderView({
     const handleReceiverLeft = (data) => {
       if (data && data.receiverName) {
         showToast(`Receiver "${data.receiverName}" disconnected.`, 'info');
-        setConnectedReceivers(prev => prev.filter(r => r.name !== data.receiverName));
+        setConnectedReceivers(prev => prev.filter(r => r.name !== data.receiverName && r.socketId !== data.socketId));
       }
     };
 
     // When receiver downloads a file:
     const handleDownloadActivity = (record) => {
-      showToast(`"${record.receiverName}" downloaded "${record.fileName}"`, 'info');
+      if (!record) return;
       const targetCode = record.code || currentSession?.code;
-      if (targetCode) {
+      if (!targetCode) return;
+
+      if (currentSession && currentSession.code === targetCode) {
+        setDownloadActivities(prev => {
+          // Strictly prevent duplicate card if same record ID or same person & file within 10 seconds
+          const isDuplicate = prev.some(existing => 
+            existing.id === record.id || 
+            (existing.receiverName === record.receiverName && 
+             existing.fileName === record.fileName && 
+             Math.abs(new Date(existing.date || 0) - new Date(record.date || 0)) < 10000)
+          );
+
+          if (isDuplicate) {
+            return prev;
+          }
+
+          showToast(`"${record.receiverName}" downloaded "${record.fileName}"`, 'info');
+          saveDownloadRecord(targetCode, record);
+          return [record, ...prev];
+        });
+      } else {
         saveDownloadRecord(targetCode, record);
-        if (currentSession && currentSession.code === targetCode) {
-          setDownloadActivities(prev => [record, ...prev]);
-        }
       }
     };
 

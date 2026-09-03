@@ -70,6 +70,48 @@ const upload = multer({
 // }
 const rooms = new Map();
 
+// Deduplicate download events (prevents duplicate download card & double toast)
+const recentDownloads = new Map();
+
+function recordDownloadActivity(code, fileId, fileName, receiverName) {
+  if (!code) return;
+  const safeReceiver = receiverName || 'Anonymous Receiver';
+  const dedupKey = `${code}_${fileId}_${safeReceiver}`;
+  const now = Date.now();
+  const lastTime = recentDownloads.get(dedupKey);
+
+  // If identical download event occurred within last 5 seconds, ignore duplicate
+  if (lastTime && (now - lastTime) < 5000) {
+    return;
+  }
+  recentDownloads.set(dedupKey, now);
+
+  // Periodically prune stale entries
+  if (recentDownloads.size > 200) {
+    for (const [k, time] of recentDownloads.entries()) {
+      if (now - time > 30000) recentDownloads.delete(k);
+    }
+  }
+
+  const room = rooms.get(code);
+  const downloadRecord = {
+    id: crypto.randomBytes(4).toString('hex'),
+    code,
+    fileId: fileId || 'unknown',
+    fileName: fileName || 'Unknown file',
+    receiverName: safeReceiver,
+    timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+    date: new Date().toISOString()
+  };
+
+  if (room) {
+    if (!room.downloads) room.downloads = [];
+    room.downloads.unshift(downloadRecord);
+  }
+
+  io.to(code).emit('download_activity', downloadRecord);
+}
+
 // Helper: detect all IPv4 LAN addresses
 function getNetworkInterfaces() {
   const interfaces = os.networkInterfaces();
@@ -128,7 +170,7 @@ io.on('connection', (socket) => {
     if (role === 'receiver') {
       let isFirstJoin = true;
       if (room) {
-        const existing = room.receivers.find(r => r.socketId === socket.id);
+        const existing = room.receivers.find(r => r.socketId === socket.id || r.name === name);
         if (!existing) {
           room.receivers.push({
             socketId: socket.id,
@@ -144,6 +186,7 @@ io.on('connection', (socket) => {
       if (isFirstJoin) {
         console.log(`[Socket] Receiver "${name}" (${socket.id}) joined room: ${code}`);
         socket.to(code).emit('receiver_joined', {
+          code,
           receiverName: name || 'Anonymous Receiver',
           socketId: socket.id,
           receiversCount: room ? room.receivers.length : 1
@@ -198,21 +241,7 @@ io.on('connection', (socket) => {
 
   // Receiver notifies that a file was downloaded
   socket.on('file_downloaded', ({ code, fileId, fileName, receiverName }) => {
-    if (!code) return;
-    const room = rooms.get(code);
-    const downloadRecord = {
-      id: crypto.randomBytes(4).toString('hex'),
-      fileId: fileId || 'unknown',
-      fileName: fileName || 'Unknown file',
-      receiverName: receiverName || 'Anonymous Receiver',
-      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      date: new Date().toISOString()
-    };
-    if (room) {
-      if (!room.downloads) room.downloads = [];
-      room.downloads.unshift(downloadRecord);
-    }
-    io.to(code).emit('download_activity', downloadRecord);
+    recordDownloadActivity(code, fileId, fileName, receiverName);
   });
 
   // Sender syncs active session directly to server / room
@@ -497,19 +526,9 @@ app.get('/api/download/:code/:fileId', (req, res) => {
     return res.status(404).send('File no longer exists on disk.');
   }
 
-  // Track download activity
+  // Track download activity with deduplication
   const receiverName = req.query.receiver || req.query.name || 'Anonymous Receiver';
-  const downloadRecord = {
-    id: crypto.randomBytes(4).toString('hex'),
-    fileId,
-    fileName: fileInfo.name,
-    receiverName,
-    timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-    date: new Date().toISOString()
-  };
-  if (!room.downloads) room.downloads = [];
-  room.downloads.unshift(downloadRecord);
-  io.to(code).emit('download_activity', downloadRecord);
+  recordDownloadActivity(code, fileId, fileInfo.name, receiverName);
 
   res.download(filePath, fileInfo.name, (err) => {
     if (err) {
@@ -553,17 +572,7 @@ app.get('/api/download-all/:code', (req, res) => {
   }
 
   const receiverName = req.query.receiver || req.query.name || 'Anonymous Receiver';
-  const downloadRecord = {
-    id: crypto.randomBytes(4).toString('hex'),
-    fileId: 'all',
-    fileName: `All Files (${room.files.length} items ZIP)`,
-    receiverName,
-    timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-    date: new Date().toISOString()
-  };
-  if (!room.downloads) room.downloads = [];
-  room.downloads.unshift(downloadRecord);
-  io.to(code).emit('download_activity', downloadRecord);
+  recordDownloadActivity(code, 'all', `All Files (${room.files.length} items ZIP)`, receiverName);
 
   const safeGroupName = room.groupName.replace(/[^a-zA-Z0-9_-]/g, '_') || 'files';
   const zipFilename = `${safeGroupName}-${code}.zip`;

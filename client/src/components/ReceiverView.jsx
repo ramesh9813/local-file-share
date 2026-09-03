@@ -166,6 +166,15 @@ export default function ReceiverView({
           origin: { y: 0.7 }
         });
         setIsConnecting(false);
+
+        // Join the Socket.IO room so sender can see receiver and live updates
+        if (socket) {
+          socket.emit('join_room', {
+            code: codeToVerify,
+            role: 'receiver',
+            name: receiverName || 'Anonymous Receiver'
+          });
+        }
         return;
       }
     } catch (httpErr) {
@@ -213,15 +222,6 @@ export default function ReceiverView({
     const effectiveReceiver = receiverName || 'Anonymous Receiver';
     showToast(`Downloading "${file.name}"...`, 'info');
 
-    if (socket) {
-      socket.emit('file_downloaded', {
-        code: sessionData.code,
-        fileId: file.id,
-        fileName: file.name,
-        receiverName: effectiveReceiver
-      });
-    }
-
     const baseUrl = getApiBaseUrl();
     const downloadUrl = `${baseUrl}/api/download/${sessionData.code}/${file.id}?receiver=${encodeURIComponent(effectiveReceiver)}`;
     
@@ -242,15 +242,6 @@ export default function ReceiverView({
     const effectiveReceiver = receiverName || 'Anonymous Receiver';
     setIsDownloadingAll(true);
     showToast('Preparing ZIP package of all files...', 'info');
-
-    if (socket) {
-      socket.emit('file_downloaded', {
-        code: sessionData.code,
-        fileId: 'all',
-        fileName: `All Files (${sessionData.files.length} items ZIP)`,
-        receiverName: effectiveReceiver
-      });
-    }
 
     const baseUrl = getApiBaseUrl();
     const zipUrl = `${baseUrl}/api/download-all/${sessionData.code}?receiver=${encodeURIComponent(effectiveReceiver)}`;
