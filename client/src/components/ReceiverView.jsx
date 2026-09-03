@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { 
   DownloadCloud, UploadCloud, Eye, Download, Archive, 
   FileText, Image as ImageIcon, Video, Music, File, 
-  ArrowLeft, RefreshCw, Check, AlertCircle, ShieldCheck, 
+  ArrowLeft, RefreshCw, AlertCircle, ShieldCheck, 
   Wifi, FolderDown 
 } from 'lucide-react';
 import { formatBytes, getFileCategory, isPreviewable } from '../utils/fileHelpers';
@@ -37,7 +37,6 @@ export default function ReceiverView({
   // Input refs for 4-digit boxes
   const inputRefs = [useRef(null), useRef(null), useRef(null), useRef(null)];
 
-  // If initialCode provided via URL (e.g. /receive?code=1234)
   useEffect(() => {
     if (initialCode && /^\d{4}$/.test(initialCode)) {
       const digits = initialCode.split('');
@@ -46,14 +45,12 @@ export default function ReceiverView({
     }
   }, [initialCode]);
 
-  // Persist receiver name
   useEffect(() => {
     if (receiverName) {
       localStorage.setItem('localshare_recv_name', receiverName);
     }
   }, [receiverName]);
 
-  // Socket listeners for real-time room updates & auto-send from sender
   useEffect(() => {
     if (!socket) return;
 
@@ -89,7 +86,6 @@ export default function ReceiverView({
     };
   }, [socket]);
 
-  // Join room when sessionData is set
   useEffect(() => {
     if (!socket || !sessionData) return;
 
@@ -100,7 +96,6 @@ export default function ReceiverView({
     });
   }, [socket, sessionData, receiverName]);
 
-  // Handle individual digit typing
   const handleDigitChange = (index, value) => {
     setErrorMessage('');
     const cleanValue = value.replace(/\D/g, '');
@@ -141,7 +136,6 @@ export default function ReceiverView({
 
   const getFullPin = () => pinDigits.join('');
 
-  // Connect to session using 4-digit code (fixes doctype is not valid json)
   const handleConnect = async (customCode) => {
     const codeToVerify = customCode || getFullPin();
     if (!/^\d{4}$/.test(codeToVerify)) {
@@ -152,7 +146,6 @@ export default function ReceiverView({
     setIsConnecting(true);
     setErrorMessage('');
 
-    // Attempt 1: Try safe API fetch with automatic URL routing
     try {
       const data = await safeFetchJson(`/api/room/${codeToVerify}`);
       if (data && data.room) {
@@ -170,7 +163,6 @@ export default function ReceiverView({
       console.warn('HTTP fetch failed, attempting real-time Socket.IO room lookup:', httpErr.message);
     }
 
-    // Attempt 2: Fallback via Socket.IO directly (Peer-to-peer / Server channel)
     if (socket) {
       socket.emit('join_room', {
         code: codeToVerify,
@@ -193,7 +185,6 @@ export default function ReceiverView({
         }
       });
 
-      // Safety timeout
       setTimeout(() => {
         setIsConnecting(prev => {
           if (prev) {
@@ -209,12 +200,10 @@ export default function ReceiverView({
     }
   };
 
-  // Download Individual File & notify sender
   const handleDownloadSingle = (file) => {
     const effectiveReceiver = receiverName || 'Anonymous Receiver';
     showToast(`Downloading "${file.name}"...`, 'info');
 
-    // Notify sender via Socket.IO: "for sender show who downloaded that file name card only"
     if (socket) {
       socket.emit('file_downloaded', {
         code: sessionData.code,
@@ -235,7 +224,6 @@ export default function ReceiverView({
     document.body.removeChild(link);
   };
 
-  // Download ALL files as a single ZIP package & notify sender
   const handleDownloadAll = () => {
     if (!sessionData || !sessionData.files || sessionData.files.length === 0) {
       showToast('No files available to download.', 'error');
@@ -246,7 +234,6 @@ export default function ReceiverView({
     setIsDownloadingAll(true);
     showToast('Preparing ZIP package of all files...', 'info');
 
-    // Notify sender via Socket.IO
     if (socket) {
       socket.emit('file_downloaded', {
         code: sessionData.code,
@@ -276,16 +263,15 @@ export default function ReceiverView({
     }, 1500);
   };
 
-  // Uniform icon renderer
   const renderFileIcon = (fileName, mimeType) => {
     const category = getFileCategory(fileName, mimeType);
     switch (category) {
-      case 'image': return <ImageIcon className="w-5 h-5 text-indigo-400" />;
-      case 'video': return <Video className="w-5 h-5 text-rose-400" />;
-      case 'audio': return <Music className="w-5 h-5 text-amber-400" />;
-      case 'text': return <FileText className="w-5 h-5 text-emerald-400" />;
-      case 'archive': return <Archive className="w-5 h-5 text-purple-400" />;
-      default: return <File className="w-5 h-5 text-slate-400" />;
+      case 'image': return <ImageIcon className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />;
+      case 'video': return <Video className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />;
+      case 'audio': return <Music className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />;
+      case 'text': return <FileText className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />;
+      case 'archive': return <Archive className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />;
+      default: return <File className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />;
     }
   };
 
@@ -302,37 +288,36 @@ export default function ReceiverView({
         <div className="flex flex-wrap items-center justify-between gap-4">
           <button
             onClick={() => setSessionData(null)}
-            className="flex items-center gap-2 text-xs font-semibold text-slate-400 hover:text-white transition"
+            className="flex items-center gap-2 text-xs font-semibold text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition"
           >
-            <ArrowLeft className="w-4 h-4 text-indigo-400" />
+            <ArrowLeft className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
             Enter Another PIN
           </button>
 
-          {/* User requested: allow receiver to have receiver button and send button */}
           <div className="flex items-center gap-2">
             <button
               onClick={() => navigate('/send')}
-              className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-slate-900 border border-slate-800 hover:border-indigo-500 text-xs font-semibold text-slate-200 transition shadow-sm"
+              className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-indigo-400 dark:hover:border-indigo-500 text-xs font-semibold text-slate-700 dark:text-slate-200 transition shadow-sm"
             >
-              <UploadCloud className="w-4 h-4 text-indigo-400" />
+              <UploadCloud className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
               <span>Switch to Send Files</span>
             </button>
           </div>
         </div>
 
         {/* Session Info Header */}
-        <div className="glass-panel rounded-3xl p-6 sm:p-8 border border-slate-800 relative overflow-hidden bg-slate-900/70 shadow-2xl">
+        <div className="rounded-3xl p-6 sm:p-8 border border-slate-200 dark:border-slate-800 relative overflow-hidden bg-white dark:bg-slate-900/70 shadow-sm">
           <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
             <div className="space-y-2">
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 text-xs font-semibold">
-                <Wifi className="w-3.5 h-3.5 text-indigo-400 animate-pulse" />
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-50 dark:bg-indigo-500/10 border border-indigo-200 dark:border-indigo-500/20 text-indigo-700 dark:text-indigo-400 text-xs font-semibold">
+                <Wifi className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400 animate-pulse" />
                 <span>Connected to Sender • Live Transfer</span>
               </div>
-              <h2 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
+              <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">
                 {sessionData.groupName}
               </h2>
-              <p className="text-xs sm:text-sm text-slate-400 font-normal leading-relaxed">
-                Shared by <span className="font-semibold text-slate-200">{sessionData.senderName}</span> • Session Code: <span className="font-mono font-bold text-indigo-300">{sessionData.code}</span>
+              <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 font-normal leading-relaxed">
+                Shared by <span className="font-semibold text-slate-900 dark:text-slate-200">{sessionData.senderName}</span> • Session Code: <span className="font-mono font-bold text-indigo-600 dark:text-indigo-300">{sessionData.code}</span>
               </p>
             </div>
 
@@ -341,7 +326,7 @@ export default function ReceiverView({
               <button
                 disabled={isDownloadingAll || files.length === 0}
                 onClick={handleDownloadAll}
-                className="flex items-center justify-center gap-2.5 px-6 py-3.5 rounded-2xl bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-sm shadow-xl shadow-indigo-600/20 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex items-center justify-center gap-2.5 px-6 py-3.5 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-sm shadow-md shadow-indigo-600/20 transition disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isDownloadingAll ? (
                   <>
@@ -358,33 +343,33 @@ export default function ReceiverView({
             </div>
           </div>
 
-          <div className="mt-6 pt-5 border-t border-slate-800/80 flex flex-wrap items-center justify-between gap-3 text-xs text-slate-400 font-normal">
+          <div className="mt-6 pt-5 border-t border-slate-100 dark:border-slate-800/80 flex flex-wrap items-center justify-between gap-3 text-xs text-slate-500 dark:text-slate-400 font-normal">
             <div className="flex items-center gap-2">
-              <ShieldCheck className="w-4 h-4 text-indigo-400" />
+              <ShieldCheck className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
               <span>Safe Transfer: Files are not auto-downloaded. Preview first, or download individually or all at once.</span>
             </div>
-            <span className="font-mono text-slate-300">
+            <span className="font-mono text-slate-700 dark:text-slate-300">
               {files.length} items • {formatBytes(totalBytes)}
             </span>
           </div>
         </div>
 
         {/* Files Explorer / List */}
-        <div className="glass-panel rounded-3xl p-6 sm:p-8 border border-slate-800 space-y-4 bg-slate-900/70">
-          <div className="flex items-center justify-between pb-3 border-b border-slate-800">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-indigo-400">
+        <div className="rounded-3xl p-6 sm:p-8 border border-slate-200 dark:border-slate-800 space-y-4 bg-white dark:bg-slate-900/70 shadow-sm">
+          <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-indigo-600 dark:text-indigo-400">
               Available Files ({files.length})
             </h3>
-            <span className="text-xs text-slate-400 font-normal">
+            <span className="text-xs text-slate-500 dark:text-slate-400 font-normal">
               Click "Download" on any file or "Preview" to inspect
             </span>
           </div>
 
           {files.length === 0 ? (
-            <div className="text-center py-12 text-slate-400 space-y-2">
-              <File className="w-12 h-12 text-indigo-400/40 mx-auto" />
-              <p className="text-sm font-semibold text-white">No files uploaded yet in this session</p>
-              <p className="text-xs text-slate-400 font-normal">Wait for the sender to drop files into the session.</p>
+            <div className="text-center py-12 text-slate-500 space-y-2">
+              <File className="w-12 h-12 text-indigo-600/30 dark:text-indigo-400/40 mx-auto" />
+              <p className="text-sm font-semibold text-slate-800 dark:text-white">No files uploaded yet in this session</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400 font-normal">Wait for the sender to drop files into the session.</p>
             </div>
           ) : (
             <div className="space-y-2.5">
@@ -394,44 +379,40 @@ export default function ReceiverView({
                 return (
                   <div 
                     key={file.id}
-                    className="flex flex-col sm:flex-row sm:items-center justify-between p-4 rounded-2xl bg-slate-950/60 border border-slate-800 hover:border-slate-700 transition gap-4"
+                    className="flex flex-col sm:flex-row sm:items-center justify-between p-4 rounded-2xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 transition gap-4"
                   >
-                    {/* File Meta */}
                     <div className="flex items-center gap-3.5 min-w-0">
-                      <div className="p-2.5 rounded-xl bg-slate-900 border border-slate-800 flex-shrink-0">
+                      <div className="p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm flex-shrink-0">
                         {renderFileIcon(file.name, file.mimeType)}
                       </div>
                       <div className="min-w-0">
-                        <p className="text-sm font-semibold text-white truncate max-w-sm sm:max-w-md" title={file.name}>
+                        <p className="text-sm font-semibold text-slate-900 dark:text-white truncate max-w-sm sm:max-w-md" title={file.name}>
                           {file.name}
                         </p>
-                        <p className="text-xs text-slate-400 font-mono mt-0.5">
+                        <p className="text-xs text-slate-500 dark:text-slate-400 font-mono mt-0.5">
                           {formatBytes(file.size)} {file.sender && `• Sent by ${file.sender}`}
                         </p>
                       </div>
                     </div>
 
-                    {/* Actions for this individual file */}
                     <div className="flex items-center gap-2 self-end sm:self-center">
-                      {/* Preview Button */}
                       {canPreview && (
                         <button
                           onClick={() => setPreviewFile(file)}
-                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-850 text-slate-300 border border-slate-800 text-xs font-medium transition"
+                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-850 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-800 text-xs font-medium transition shadow-sm"
                           title="Preview without downloading"
                         >
-                          <Eye className="w-3.5 h-3.5 text-indigo-400" />
+                          <Eye className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
                           <span>Preview</span>
                         </button>
                       )}
 
-                      {/* INDIVIDUAL DOWNLOAD BUTTON */}
                       <button
                         onClick={() => handleDownloadSingle(file)}
-                        className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-300 border border-indigo-500/20 text-xs font-semibold transition hover:scale-105 active:scale-95 shadow-sm"
+                        className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-500/10 dark:hover:bg-indigo-500/20 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-500/20 text-xs font-semibold transition hover:scale-105 active:scale-95 shadow-sm"
                         title="Download this individual file"
                       >
-                        <Download className="w-3.5 h-3.5 text-indigo-400" />
+                        <Download className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
                         <span>Download</span>
                       </button>
                     </div>
@@ -442,7 +423,6 @@ export default function ReceiverView({
           )}
         </div>
 
-        {/* File Preview Modal */}
         <FilePreviewModal
           isOpen={!!previewFile}
           onClose={() => setPreviewFile(null)}
@@ -459,39 +439,38 @@ export default function ReceiverView({
   // ─────────────────────────────────────────────────────────────
   return (
     <div className="max-w-xl mx-auto space-y-8 animate-fadeIn py-4">
-      {/* Top Header & Switch to Send button */}
       <div className="flex items-center justify-between">
         <button
           onClick={() => navigate('/')}
-          className="flex items-center gap-2 text-xs font-semibold text-slate-400 hover:text-white transition"
+          className="flex items-center gap-2 text-xs font-semibold text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition"
         >
-          <ArrowLeft className="w-4 h-4 text-indigo-400" />
+          <ArrowLeft className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
           Back to Home
         </button>
 
         <button
           onClick={() => navigate('/send')}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-900 border border-slate-800 hover:border-slate-700 text-xs font-semibold text-slate-300 transition"
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-slate-300 text-xs font-semibold text-slate-700 dark:text-slate-300 transition shadow-sm"
         >
-          <UploadCloud className="w-3.5 h-3.5 text-indigo-400" />
+          <UploadCloud className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
           <span>Switch to Send</span>
         </button>
       </div>
 
       <div className="text-center space-y-2">
-        <div className="w-14 h-14 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 flex items-center justify-center mx-auto mb-2">
-          <DownloadCloud className="w-7 h-7 text-indigo-400" />
+        <div className="w-14 h-14 rounded-2xl bg-indigo-50 dark:bg-indigo-500/10 border border-indigo-100 dark:border-indigo-500/20 text-indigo-600 dark:text-indigo-400 flex items-center justify-center mx-auto mb-2 shadow-sm">
+          <DownloadCloud className="w-7 h-7 text-indigo-600 dark:text-indigo-400" />
         </div>
-        <h1 className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight">Receive Files</h1>
-        <p className="text-sm text-slate-400 font-normal leading-relaxed">
+        <h1 className="text-3xl sm:text-4xl font-extrabold text-slate-900 dark:text-white tracking-tight">Receive Files</h1>
+        <p className="text-sm text-slate-600 dark:text-slate-400 font-normal leading-relaxed">
           Enter the 4-digit code provided by the sender on your network.
         </p>
       </div>
 
       {/* 4-Digit Code Box Card */}
-      <div className="glass-panel rounded-3xl p-6 sm:p-8 border border-slate-800 space-y-6 bg-slate-900/70">
+      <div className="rounded-3xl p-6 sm:p-8 border border-slate-200/90 dark:border-slate-800 space-y-6 bg-white dark:bg-slate-900/70 shadow-sm">
         <div className="space-y-4">
-          <label className="block text-center text-xs font-bold uppercase tracking-wider text-indigo-400">
+          <label className="block text-center text-xs font-bold uppercase tracking-wider text-indigo-600 dark:text-indigo-400">
             Enter 4-Digit PIN Code
           </label>
 
@@ -508,32 +487,32 @@ export default function ReceiverView({
                 value={digit}
                 onChange={(e) => handleDigitChange(index, e.target.value)}
                 onKeyDown={(e) => handleKeyDown(index, e)}
-                className={`w-14 h-16 sm:w-16 sm:h-20 text-center font-mono text-3xl sm:text-4xl font-extrabold rounded-2xl bg-slate-950 border transition-all duration-200 focus:outline-none ${
+                className={`w-14 h-16 sm:w-16 sm:h-20 text-center font-mono text-3xl sm:text-4xl font-extrabold rounded-2xl transition-all duration-200 focus:outline-none ${
                   digit 
-                    ? 'border-indigo-500 text-white shadow-lg shadow-indigo-500/10 scale-105' 
-                    : 'border-slate-800 text-slate-400 focus:border-indigo-400'
+                    ? 'border-2 border-indigo-600 text-indigo-700 dark:text-white bg-indigo-50/50 dark:bg-indigo-500/10 shadow-md shadow-indigo-500/10 scale-105' 
+                    : 'border border-slate-300 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-slate-700 dark:text-slate-400 focus:border-indigo-600'
                 }`}
               />
             ))}
           </div>
 
-          {/* Receiver Display Name (Optional) */}
+          {/* Receiver Display Name */}
           <div className="pt-2">
-            <label className="block text-xs font-semibold text-slate-300 mb-1.5">
-              Your Name <span className="text-slate-500 font-normal">(shown to sender when you connect or download)</span>
+            <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
+              Your Name <span className="text-slate-400 font-normal">(shown to sender when you connect or download)</span>
             </label>
             <input
               type="text"
               placeholder="e.g. Sarah, iPhone 15"
               value={receiverName}
               onChange={(e) => setReceiverName(e.target.value)}
-              className="w-full px-4 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-indigo-500 transition font-normal"
+              className="w-full px-4 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 text-sm text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-600 focus:outline-none focus:border-indigo-600 transition font-normal"
             />
           </div>
 
           {errorMessage && (
-            <div className="flex items-center gap-2 p-3 rounded-xl bg-slate-950 border border-rose-500/40 text-xs text-rose-400 animate-fadeIn">
-              <AlertCircle className="w-4 h-4 text-indigo-400 flex-shrink-0" />
+            <div className="flex items-center gap-2 p-3 rounded-xl bg-rose-50 dark:bg-slate-950 border border-rose-200 dark:border-rose-500/40 text-xs text-rose-700 dark:text-rose-400 animate-fadeIn">
+              <AlertCircle className="w-4 h-4 text-indigo-600 dark:text-indigo-400 flex-shrink-0" />
               <span>{errorMessage}</span>
             </div>
           )}
@@ -543,7 +522,7 @@ export default function ReceiverView({
         <button
           onClick={() => handleConnect()}
           disabled={isConnecting || getFullPin().length !== 4}
-          className="w-full py-3.5 px-6 rounded-2xl bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-sm shadow-xl shadow-indigo-600/20 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+          className="w-full py-3.5 px-6 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-sm shadow-md shadow-indigo-600/20 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
         >
           {isConnecting ? (
             <>
@@ -558,8 +537,8 @@ export default function ReceiverView({
           )}
         </button>
 
-        <div className="pt-2 text-center text-xs text-slate-400 flex items-center justify-center gap-1.5 font-normal">
-          <Wifi className="w-3.5 h-3.5 text-indigo-400" />
+        <div className="pt-2 text-center text-xs text-slate-500 dark:text-slate-400 flex items-center justify-center gap-1.5 font-normal">
+          <Wifi className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
           <span>Local network peer-to-peer connection</span>
         </div>
       </div>

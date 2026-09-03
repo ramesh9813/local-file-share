@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { 
   UploadCloud, FileText, Image as ImageIcon, Video, Music, Archive, 
   File, Trash2, Dices, Copy, Check, Users, ArrowLeft, RefreshCw, 
-  Share2, PlusCircle, CheckCircle, Wifi, AlertCircle, Download, UserCheck 
+  Share2, PlusCircle, Wifi, Download, UserCheck 
 } from 'lucide-react';
 import { formatBytes, generateFourDigitCode, getFileCategory } from '../utils/fileHelpers';
 import { uploadFilesWithProgress, getApiBaseUrl } from '../utils/apiClient';
@@ -85,7 +85,6 @@ export default function SenderView({
     });
 
     // When a new receiver connects with the 4-digit PIN:
-    // "and if new user with pin connectwd send them auto"
     const handleReceiverJoined = (data) => {
       showToast(`Receiver "${data.receiverName}" connected! Files sent automatically.`, 'success');
 
@@ -119,7 +118,6 @@ export default function SenderView({
     };
 
     // When a receiver downloads a file:
-    // "for sender show who downloaded that file name card only"
     const handleDownloadActivity = (record) => {
       showToast(`"${record.receiverName}" downloaded "${record.fileName}"`, 'info');
       setDownloadActivities(prev => {
@@ -226,7 +224,6 @@ export default function SenderView({
     setUploadProgress(5);
 
     try {
-      // Use real XMLHttpRequest upload tracker
       const result = await uploadFilesWithProgress({
         code: code.trim(),
         groupName: groupName.trim(),
@@ -245,11 +242,9 @@ export default function SenderView({
         createdAt: new Date().toISOString()
       };
 
-      // Store in local storage as requested
       saveActiveSession(sessionObj);
       setActiveSession(sessionObj);
 
-      // Notify socket server of active session
       if (socket) {
         socket.emit('sync_session_from_sender', {
           code: sessionObj.code,
@@ -273,7 +268,6 @@ export default function SenderView({
     }
   };
 
-  // Upload more files to active session
   const handleAddMoreFiles = async (e) => {
     if (!e.target.files || e.target.files.length === 0 || !activeSession) return;
 
@@ -345,16 +339,15 @@ export default function SenderView({
     showToast('Sharing session closed and cleared.', 'info');
   };
 
-  // Uniform icon renderer
   const renderFileIcon = (fileName, mimeType) => {
     const category = getFileCategory(fileName, mimeType);
     switch (category) {
-      case 'image': return <ImageIcon className="w-5 h-5 text-indigo-400" />;
-      case 'video': return <Video className="w-5 h-5 text-indigo-400" />;
-      case 'audio': return <Music className="w-5 h-5 text-indigo-400" />;
-      case 'text': return <FileText className="w-5 h-5 text-indigo-400" />;
-      case 'archive': return <Archive className="w-5 h-5 text-indigo-400" />;
-      default: return <File className="w-5 h-5 text-indigo-400" />;
+      case 'image': return <ImageIcon className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />;
+      case 'video': return <Video className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />;
+      case 'audio': return <Music className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />;
+      case 'text': return <FileText className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />;
+      case 'archive': return <Archive className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />;
+      default: return <File className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />;
     }
   };
 
@@ -375,23 +368,23 @@ export default function SenderView({
                 setActiveSession(null);
               }
             }}
-            className="flex items-center gap-2 text-xs font-semibold text-slate-400 hover:text-white transition"
+            className="flex items-center gap-2 text-xs font-semibold text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition"
           >
-            <ArrowLeft className="w-4 h-4 text-indigo-400" />
+            <ArrowLeft className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
             Create Another Session
           </button>
 
           <div className="flex items-center gap-3">
             <button
               onClick={onOpenQr}
-              className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-slate-900 border border-slate-800 hover:border-indigo-500/40 text-xs text-slate-300 transition font-semibold"
+              className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-indigo-400 dark:hover:border-indigo-500 text-xs text-slate-700 dark:text-slate-300 transition font-semibold shadow-sm"
             >
-              <Share2 className="w-3.5 h-3.5 text-indigo-400" />
+              <Share2 className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
               <span>Show QR Code</span>
             </button>
             <button
               onClick={handleEndSession}
-              className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-900 hover:bg-slate-850 text-slate-300 border border-slate-800 hover:border-rose-500/40 text-xs font-semibold transition"
+              className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-white dark:bg-slate-900 hover:bg-rose-50 dark:hover:bg-slate-850 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-800 hover:border-rose-400 text-xs font-semibold transition shadow-sm"
             >
               <span>End Session</span>
             </button>
@@ -399,71 +392,71 @@ export default function SenderView({
         </div>
 
         {/* Hero PIN Card */}
-        <div className="glass-panel rounded-3xl p-6 sm:p-8 border border-slate-800 relative overflow-hidden bg-slate-900/70 shadow-2xl">
+        <div className="rounded-3xl p-6 sm:p-8 border border-slate-200 dark:border-slate-800 relative overflow-hidden bg-white dark:bg-slate-900/70 shadow-sm">
           <div className="flex flex-col md:flex-row items-center justify-between gap-6">
             <div className="space-y-2 text-center md:text-left">
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 text-xs font-semibold">
-                <Wifi className="w-3.5 h-3.5 text-indigo-400 animate-pulse" />
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-50 dark:bg-indigo-500/10 border border-indigo-200 dark:border-indigo-500/20 text-indigo-700 dark:text-indigo-400 text-xs font-semibold">
+                <Wifi className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400 animate-pulse" />
                 <span>Active Local Sharing Session (Stored in Local Storage)</span>
               </div>
-              <h2 className="text-2xl sm:text-3xl font-bold text-white tracking-tight">
+              <h2 className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white tracking-tight">
                 {activeSession.groupName}
               </h2>
-              <p className="text-sm text-slate-400 font-normal leading-relaxed">
-                Shared by <span className="font-semibold text-slate-200">{activeSession.senderName}</span> • Give this 4-digit code to anyone on your network
+              <p className="text-sm text-slate-600 dark:text-slate-400 font-normal leading-relaxed">
+                Shared by <span className="font-semibold text-slate-900 dark:text-slate-200">{activeSession.senderName}</span> • Give this 4-digit code to anyone on your network
               </p>
             </div>
 
             {/* 4-Digit PIN Box */}
             <div className="flex flex-col items-center gap-2">
-              <span className="text-xs font-bold uppercase tracking-wider text-indigo-400">
+              <span className="text-xs font-bold uppercase tracking-wider text-indigo-600 dark:text-indigo-400">
                 Receiver 4-Digit PIN
               </span>
-              <div className="flex items-center gap-2 bg-slate-950/90 border border-slate-800 rounded-2xl p-3 px-5 shadow-lg">
-                <span className="text-4xl sm:text-5xl font-extrabold tracking-widest font-mono text-white">
+              <div className="flex items-center gap-2 bg-slate-50 dark:bg-slate-950/90 border border-slate-200 dark:border-slate-800 rounded-2xl p-3 px-5 shadow-sm">
+                <span className="text-4xl sm:text-5xl font-extrabold tracking-widest font-mono text-slate-900 dark:text-white">
                   {activeSession.code}
                 </span>
                 <button
                   onClick={handleCopyCode}
                   title="Copy PIN"
-                  className="p-2 ml-2 rounded-xl bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/20 text-indigo-400 transition"
+                  className="p-2 ml-2 rounded-xl bg-indigo-50 dark:bg-indigo-500/10 hover:bg-indigo-100 dark:hover:bg-indigo-500/20 border border-indigo-200 dark:border-indigo-500/20 text-indigo-600 dark:text-indigo-400 transition"
                 >
-                  {copiedCode ? <Check className="w-5 h-5 text-indigo-400" /> : <Copy className="w-5 h-5 text-indigo-400" />}
+                  {copiedCode ? <Check className="w-5 h-5 text-indigo-600 dark:text-indigo-400" /> : <Copy className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />}
                 </button>
               </div>
             </div>
           </div>
 
           {/* Quick link bar */}
-          <div className="mt-6 pt-6 border-t border-slate-800/80 flex flex-wrap items-center justify-between gap-3">
-            <div className="flex items-center gap-2 text-xs text-slate-400 font-normal">
-              <Wifi className="w-4 h-4 text-indigo-400" />
+          <div className="mt-6 pt-6 border-t border-slate-100 dark:border-slate-800/80 flex flex-wrap items-center justify-between gap-3">
+            <div className="flex items-center gap-2 text-xs text-slate-600 dark:text-slate-400 font-normal">
+              <Wifi className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
               <span>Direct Link:</span>
-              <span className="font-mono text-indigo-300 max-w-[280px] sm:max-w-md truncate">
+              <span className="font-mono text-indigo-600 dark:text-indigo-300 max-w-[280px] sm:max-w-md truncate">
                 {sessionUrl}
               </span>
             </div>
             <button
               onClick={handleCopyLink}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-950 border border-slate-800 hover:border-indigo-500/40 text-slate-200 text-xs font-medium transition"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 hover:border-indigo-400 dark:hover:border-indigo-500/40 text-slate-700 dark:text-slate-200 text-xs font-medium transition"
             >
-              {copiedLink ? <Check className="w-3.5 h-3.5 text-indigo-400" /> : <Copy className="w-3.5 h-3.5 text-indigo-400" />}
+              {copiedLink ? <Check className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" /> : <Copy className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />}
               <span>{copiedLink ? 'Link Copied' : 'Copy Direct Link'}</span>
             </button>
           </div>
         </div>
 
         {/* Live Receivers Status */}
-        <div className="glass-panel rounded-2xl p-5 border border-slate-800 flex items-center justify-between gap-4 bg-slate-900/70">
+        <div className="rounded-2xl p-5 border border-slate-200 dark:border-slate-800 flex items-center justify-between gap-4 bg-white dark:bg-slate-900/70 shadow-sm">
           <div className="flex items-center gap-3">
-            <div className="p-2.5 rounded-xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-400">
-              <Users className="w-5 h-5 text-indigo-400" />
+            <div className="p-2.5 rounded-xl bg-indigo-50 dark:bg-indigo-500/10 border border-indigo-100 dark:border-indigo-500/20 text-indigo-600 dark:text-indigo-400">
+              <Users className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
             </div>
             <div>
-              <h4 className="text-sm font-semibold text-white">
+              <h4 className="text-sm font-semibold text-slate-900 dark:text-white">
                 Receiver Connection Status
               </h4>
-              <p className="text-xs text-slate-400 font-normal mt-0.5">
+              <p className="text-xs text-slate-500 dark:text-slate-400 font-normal mt-0.5">
                 {connectedReceivers.length > 0 
                   ? `${connectedReceivers.length} receiver(s) connected • files automatically delivered` 
                   : 'Waiting for receiver to enter 4-digit PIN on this network...'}
@@ -473,66 +466,63 @@ export default function SenderView({
 
           <div>
             {connectedReceivers.length > 0 ? (
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 text-xs font-semibold">
-                <span className="w-2 h-2 rounded-full bg-indigo-400 animate-pulse"></span>
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/20 text-emerald-700 dark:text-emerald-400 text-xs font-semibold">
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
                 Connected
               </span>
             ) : (
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 text-xs font-semibold">
-                <RefreshCw className="w-3 h-3 animate-spin text-indigo-400" />
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-indigo-50 dark:bg-indigo-500/10 border border-indigo-200 dark:border-indigo-500/20 text-indigo-700 dark:text-indigo-400 text-xs font-semibold">
+                <RefreshCw className="w-3 h-3 animate-spin text-indigo-600 dark:text-indigo-400" />
                 Listening...
               </span>
             )}
           </div>
         </div>
 
-        {/* ─────────────────────────────────────────────────────────────
-            "for sender show who downloaded that file name card only"
-            DEDICATED WHO DOWNLOADED THAT FILE CARD SECTION
-           ───────────────────────────────────────────────────────────── */}
-        <div className="glass-panel rounded-3xl p-6 sm:p-8 border border-slate-800 space-y-4 bg-slate-900/70">
-          <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+        {/* WHO DOWNLOADED THAT FILE CARD SECTION */}
+        <div className="rounded-3xl p-6 sm:p-8 border border-slate-200 dark:border-slate-800 space-y-4 bg-white dark:bg-slate-900/70 shadow-sm">
+          <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
             <div className="flex items-center gap-2">
-              <UserCheck className="w-4 h-4 text-indigo-400" />
-              <h3 className="text-xs font-bold uppercase tracking-wider text-indigo-400">
+              <UserCheck className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+              <h3 className="text-xs font-bold uppercase tracking-wider text-indigo-600 dark:text-indigo-400">
                 Who Downloaded Files ({downloadActivities.length})
               </h3>
             </div>
             {downloadActivities.length > 0 && (
-              <span className="text-xs text-slate-400 font-normal">
+              <span className="text-xs text-slate-500 dark:text-slate-400 font-normal">
                 Live download tracking
               </span>
             )}
           </div>
 
           {downloadActivities.length === 0 ? (
-            <div className="p-4 rounded-2xl bg-slate-950/40 border border-slate-800 text-center py-6">
-              <Download className="w-8 h-8 text-indigo-400/40 mx-auto mb-2" />
-              <p className="text-xs font-semibold text-white">No files have been downloaded yet</p>
-              <p className="text-[11px] text-slate-400 mt-0.5">When a receiver downloads an individual file or ZIP, their card will appear here automatically.</p>
+            <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-950/40 border border-slate-200/80 dark:border-slate-800 text-center py-6">
+              <Download className="w-8 h-8 text-indigo-600/30 dark:text-indigo-400/40 mx-auto mb-2" />
+              <p className="text-xs font-semibold text-slate-800 dark:text-white">No files have been downloaded yet</p>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">When a receiver downloads an individual file or ZIP, their card will appear here automatically.</p>
             </div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-60 overflow-y-auto pr-1">
               {downloadActivities.map((act, index) => (
                 <div 
                   key={act.id || index}
-                  className="p-3.5 rounded-2xl bg-slate-950/80 border border-slate-800 hover:border-indigo-500/40 transition flex items-center justify-between gap-3 animate-fadeIn"
+                  className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-950/80 border border-slate-200 dark:border-slate-800 hover:border-indigo-400 dark:hover:border-indigo-500/40 transition flex items-center justify-between gap-3 animate-fadeIn"
                 >
                   <div className="flex items-center gap-3 min-w-0">
-                    <div className="w-9 h-9 rounded-xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 flex items-center justify-center font-bold text-xs flex-shrink-0">
+                    <div className="w-9 h-9 rounded-xl bg-indigo-50 dark:bg-indigo-500/10 border border-indigo-200 dark:border-indigo-500/20 text-indigo-700 dark:text-indigo-400 flex items-center justify-center font-bold text-xs flex-shrink-0">
                       {act.receiverName ? act.receiverName[0].toUpperCase() : 'U'}
                     </div>
                     <div className="min-w-0">
-                      <p className="text-xs font-semibold text-white truncate" title={act.receiverName}>
+                      <p className="text-xs font-semibold text-slate-900 dark:text-white truncate" title={act.receiverName}>
                         {act.receiverName}
                       </p>
-                      <p className="text-[11px] text-indigo-300 font-mono truncate max-w-[180px]" title={act.fileName}>
+                      <p className="text-[11px] text-indigo-600 dark:text-indigo-300 font-mono truncate max-w-[180px]" title={act.fileName}>
                         {act.fileName}
                       </p>
                     </div>
                   </div>
 
-                  <span className="text-[10px] font-mono text-slate-400 bg-slate-900 px-2 py-1 rounded-lg border border-slate-800 flex-shrink-0">
+                  <span className="text-[10px] font-mono text-slate-500 dark:text-slate-400 bg-white dark:bg-slate-900 px-2 py-1 rounded-lg border border-slate-200 dark:border-slate-800 flex-shrink-0">
                     {act.timestamp}
                   </span>
                 </div>
@@ -542,13 +532,13 @@ export default function SenderView({
         </div>
 
         {/* Shared Files List */}
-        <div className="glass-panel rounded-3xl p-6 sm:p-8 border border-slate-800 space-y-6 bg-slate-900/70">
-          <div className="flex flex-wrap items-center justify-between gap-4 pb-4 border-b border-slate-800">
+        <div className="rounded-3xl p-6 sm:p-8 border border-slate-200 dark:border-slate-800 space-y-6 bg-white dark:bg-slate-900/70 shadow-sm">
+          <div className="flex flex-wrap items-center justify-between gap-4 pb-4 border-b border-slate-100 dark:border-slate-800">
             <div>
-              <h3 className="text-lg font-bold text-white">
+              <h3 className="text-lg font-bold text-slate-900 dark:text-white">
                 Files in Session ({activeSession.files?.length || 0})
               </h3>
-              <p className="text-xs text-slate-400 font-normal mt-0.5">
+              <p className="text-xs text-slate-500 dark:text-slate-400 font-normal mt-0.5">
                 Total size: {formatBytes(activeSession.files?.reduce((a, f) => a + f.size, 0) || 0)}
               </p>
             </div>
@@ -564,7 +554,7 @@ export default function SenderView({
               <button
                 disabled={isAddingMore}
                 onClick={() => addFileInputRef.current?.click()}
-                className="flex items-center gap-2 px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold transition disabled:opacity-50 shadow-md shadow-indigo-600/20"
+                className="flex items-center gap-2 px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold transition disabled:opacity-50 shadow-md shadow-indigo-600/20"
               >
                 {isAddingMore ? <RefreshCw className="w-4 h-4 animate-spin text-white" /> : <PlusCircle className="w-4 h-4 text-white" />}
                 <span>Add More Files</span>
@@ -576,17 +566,17 @@ export default function SenderView({
             {activeSession.files?.map((file, idx) => (
               <div 
                 key={file.id || idx}
-                className="flex items-center justify-between p-3.5 rounded-xl bg-slate-950/60 border border-slate-800 hover:border-slate-750 transition"
+                className="flex items-center justify-between p-3.5 rounded-xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-750 transition"
               >
                 <div className="flex items-center gap-3 min-w-0">
-                  <div className="p-2 rounded-xl bg-slate-900 border border-slate-800">
+                  <div className="p-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm">
                     {renderFileIcon(file.name, file.mimeType)}
                   </div>
                   <div className="min-w-0">
-                    <p className="text-sm font-semibold text-white truncate max-w-sm sm:max-w-md" title={file.name}>
+                    <p className="text-sm font-semibold text-slate-900 dark:text-white truncate max-w-sm sm:max-w-md" title={file.name}>
                       {file.name}
                     </p>
-                    <p className="text-xs text-slate-400 font-mono mt-0.5">
+                    <p className="text-xs text-slate-500 dark:text-slate-400 font-mono mt-0.5">
                       {formatBytes(file.size)}
                     </p>
                   </div>
@@ -596,7 +586,7 @@ export default function SenderView({
                   <a
                     href={`${baseUrl}/api/download/${activeSession.code}/${file.id}`}
                     download={file.name}
-                    className="p-2 text-xs font-semibold text-indigo-400 hover:text-indigo-300 hover:bg-indigo-500/10 rounded-lg transition"
+                    className="p-2 text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 rounded-lg transition"
                     title="Download file"
                   >
                     Download
@@ -619,37 +609,37 @@ export default function SenderView({
       <div className="flex items-center justify-between">
         <button
           onClick={() => navigate('/')}
-          className="flex items-center gap-2 text-xs font-semibold text-slate-400 hover:text-white transition"
+          className="flex items-center gap-2 text-xs font-semibold text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition"
         >
-          <ArrowLeft className="w-4 h-4 text-indigo-400" />
+          <ArrowLeft className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
           Back to Home
         </button>
 
-        <div className="flex items-center gap-2 text-xs text-indigo-400 bg-indigo-500/10 px-3 py-1.5 rounded-xl border border-indigo-500/20 font-semibold">
-          <Wifi className="w-3.5 h-3.5 text-indigo-400" />
+        <div className="flex items-center gap-2 text-xs text-indigo-700 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-500/10 px-3 py-1.5 rounded-xl border border-indigo-200 dark:border-indigo-500/20 font-semibold">
+          <Wifi className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
           <span>Local LAN Sharing</span>
         </div>
       </div>
 
       <div className="text-center space-y-2">
-        <h1 className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight">Share Files Locally</h1>
-        <p className="text-sm text-slate-400 font-normal leading-relaxed">
+        <h1 className="text-3xl sm:text-4xl font-extrabold text-slate-900 dark:text-white tracking-tight">Share Files Locally</h1>
+        <p className="text-sm text-slate-600 dark:text-slate-400 font-normal leading-relaxed">
           Configure session details, generate a 4-digit PIN, and choose files to share.
         </p>
       </div>
 
       <form onSubmit={handleStartSharing} className="space-y-6">
         {/* Session Inputs Card */}
-        <div className="glass-panel rounded-3xl p-6 sm:p-8 border border-slate-800 space-y-6 bg-slate-900/70">
-          <h3 className="text-xs font-bold uppercase tracking-wider text-indigo-400">
+        <div className="rounded-3xl p-6 sm:p-8 border border-slate-200/90 dark:border-slate-800 space-y-6 bg-white dark:bg-slate-900/70 shadow-sm">
+          <h3 className="text-xs font-bold uppercase tracking-wider text-indigo-600 dark:text-indigo-400">
             1. Sender & Group Information
           </h3>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
             {/* Input 1: Sender Name */}
             <div className="space-y-2">
-              <label className="block text-xs font-semibold text-slate-300">
-                Your Name <span className="text-indigo-400">*</span>
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300">
+                Your Name <span className="text-indigo-600 dark:text-indigo-400">*</span>
               </label>
               <input
                 type="text"
@@ -657,14 +647,14 @@ export default function SenderView({
                 placeholder="e.g. Alex, MacBook Pro"
                 value={senderName}
                 onChange={(e) => setSenderName(e.target.value)}
-                className="w-full px-4 py-3 rounded-xl bg-slate-950/80 border border-slate-700/80 text-white placeholder-slate-500 text-sm focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition font-normal"
+                className="w-full px-4 py-3 rounded-xl bg-slate-50 dark:bg-slate-950/80 border border-slate-300 dark:border-slate-700/80 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 text-sm focus:outline-none focus:border-indigo-600 focus:ring-1 focus:ring-indigo-600 transition font-normal"
               />
             </div>
 
             {/* Input 2: Group Name */}
             <div className="space-y-2">
-              <label className="block text-xs font-semibold text-slate-300">
-                Group Name <span className="text-indigo-400">*</span>
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300">
+                Group Name <span className="text-indigo-600 dark:text-indigo-400">*</span>
               </label>
               <input
                 type="text"
@@ -672,27 +662,27 @@ export default function SenderView({
                 placeholder="e.g. Team Alpha, Meeting Docs"
                 value={groupName}
                 onChange={(e) => setGroupName(e.target.value)}
-                className="w-full px-4 py-3 rounded-xl bg-slate-950/80 border border-slate-700/80 text-white placeholder-slate-500 text-sm focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition font-normal"
+                className="w-full px-4 py-3 rounded-xl bg-slate-50 dark:bg-slate-950/80 border border-slate-300 dark:border-slate-700/80 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 text-sm focus:outline-none focus:border-indigo-600 focus:ring-1 focus:ring-indigo-600 transition font-normal"
               />
             </div>
           </div>
 
           {/* 4-Digit Code Configuration */}
-          <div className="pt-2 border-t border-slate-800/80">
+          <div className="pt-2 border-t border-slate-100 dark:border-slate-800/80">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3">
               <div>
-                <label className="block text-xs font-semibold text-slate-300">
-                  4-Digit Security Code <span className="text-indigo-400">*</span>
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300">
+                  4-Digit Security Code <span className="text-indigo-600 dark:text-indigo-400">*</span>
                 </label>
-                <p className="text-xs text-slate-400 font-normal">The receiver must enter this code to access your files</p>
+                <p className="text-xs text-slate-500 dark:text-slate-400 font-normal">The receiver must enter this code to access your files</p>
               </div>
 
               <button
                 type="button"
                 onClick={handleRegenerateCode}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-950 hover:bg-slate-900 border border-slate-800 text-slate-300 text-xs font-semibold transition self-start sm:self-auto"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-50 dark:bg-slate-950 hover:bg-slate-100 dark:hover:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 text-xs font-semibold transition self-start sm:self-auto"
               >
-                <Dices className="w-3.5 h-3.5 text-indigo-400" />
+                <Dices className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
                 Randomize PIN
               </button>
             </div>
@@ -709,9 +699,9 @@ export default function SenderView({
                   const val = e.target.value.replace(/\D/g, '').slice(0, 4);
                   setCode(val);
                 }}
-                className="w-44 px-4 py-3 text-center tracking-widest font-mono text-2xl font-bold rounded-xl bg-slate-950 border border-indigo-500/50 text-white focus:outline-none focus:border-indigo-400 transition"
+                className="w-44 px-4 py-3 text-center tracking-widest font-mono text-2xl font-bold rounded-xl bg-slate-50 dark:bg-slate-950 border border-indigo-300 dark:border-indigo-500/50 text-slate-900 dark:text-white focus:outline-none focus:border-indigo-600 transition shadow-sm"
               />
-              <span className="text-xs text-slate-400 font-normal">
+              <span className="text-xs text-slate-500 dark:text-slate-400 font-normal">
                 4 numeric digits (e.g. {code || '4829'})
               </span>
             </div>
@@ -719,16 +709,16 @@ export default function SenderView({
         </div>
 
         {/* File Dropzone Card */}
-        <div className="glass-panel rounded-3xl p-6 sm:p-8 border border-slate-800 space-y-6 bg-slate-900/70">
+        <div className="rounded-3xl p-6 sm:p-8 border border-slate-200/90 dark:border-slate-800 space-y-6 bg-white dark:bg-slate-900/70 shadow-sm">
           <div className="flex items-center justify-between">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-indigo-400">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-indigo-600 dark:text-indigo-400">
               2. Select Files to Share
             </h3>
             {selectedFiles.length > 0 && (
               <button
                 type="button"
                 onClick={clearFiles}
-                className="text-xs font-semibold text-slate-400 hover:text-white transition"
+                className="text-xs font-semibold text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white transition"
               >
                 Clear all ({selectedFiles.length})
               </button>
@@ -741,10 +731,10 @@ export default function SenderView({
             onDragLeave={handleDragLeave}
             onDrop={handleDrop}
             onClick={() => fileInputRef.current?.click()}
-            className={`border-2 border-dashed rounded-2xl p-8 text-center cursor-pointer transition-all duration-300 flex flex-col items-center justify-center gap-3 ${
+            className={`border-2 border-dashed rounded-2xl p-8 text-center cursor-pointer transition-all duration-200 flex flex-col items-center justify-center gap-3 ${
               isDragging
-                ? 'border-indigo-500 bg-indigo-500/10 scale-[1.01]'
-                : 'border-slate-800 hover:border-indigo-500/50 bg-slate-950/40 hover:bg-slate-950/70'
+                ? 'border-indigo-600 bg-indigo-50/60 dark:bg-indigo-500/10 scale-[1.01]'
+                : 'border-slate-300 dark:border-slate-800 hover:border-indigo-400 dark:hover:border-indigo-500/50 bg-slate-50/50 dark:bg-slate-950/40 hover:bg-slate-50 dark:hover:bg-slate-950/70'
             }`}
           >
             <input
@@ -755,15 +745,15 @@ export default function SenderView({
               onChange={handleFileSelect}
             />
 
-            <div className="w-14 h-14 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 flex items-center justify-center">
-              <UploadCloud className="w-7 h-7 text-indigo-400" />
+            <div className="w-14 h-14 rounded-2xl bg-indigo-50 dark:bg-indigo-500/10 border border-indigo-100 dark:border-indigo-500/20 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shadow-sm">
+              <UploadCloud className="w-7 h-7 text-indigo-600 dark:text-indigo-400" />
             </div>
 
             <div>
-              <p className="text-sm font-semibold text-white">
-                Drag and drop files here, or <span className="text-indigo-400 underline">browse</span>
+              <p className="text-sm font-semibold text-slate-900 dark:text-white">
+                Drag and drop files here, or <span className="text-indigo-600 dark:text-indigo-400 underline font-medium">browse</span>
               </p>
-              <p className="text-xs text-slate-400 mt-1 font-normal">
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 font-normal">
                 Supports photos, videos, documents, zip archives, and any file format
               </p>
             </div>
@@ -772,26 +762,26 @@ export default function SenderView({
           {/* Selected Files Preview List */}
           {selectedFiles.length > 0 && (
             <div className="space-y-4 pt-2">
-              <div className="flex items-center justify-between text-xs text-slate-400 font-normal">
+              <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 font-normal">
                 <span>{selectedFiles.length} file(s) selected</span>
-                <span className="font-mono font-medium text-slate-200">Total: {formatBytes(totalSizeBytes)}</span>
+                <span className="font-mono font-medium text-slate-800 dark:text-slate-200">Total: {formatBytes(totalSizeBytes)}</span>
               </div>
 
               <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
                 {selectedFiles.map((file, idx) => (
                   <div
                     key={`${file.name}_${idx}`}
-                    className="flex items-center justify-between p-3 rounded-xl bg-slate-950/70 border border-slate-800"
+                    className="flex items-center justify-between p-3 rounded-xl bg-slate-50 dark:bg-slate-950/70 border border-slate-200 dark:border-slate-800"
                   >
                     <div className="flex items-center gap-3 min-w-0">
-                      <div className="p-2 rounded-xl bg-slate-900 border border-slate-800">
+                      <div className="p-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm">
                         {renderFileIcon(file.name, file.type)}
                       </div>
                       <div className="min-w-0">
-                        <p className="text-xs font-semibold text-white truncate max-w-xs sm:max-w-md" title={file.name}>
+                        <p className="text-xs font-semibold text-slate-900 dark:text-white truncate max-w-xs sm:max-w-md" title={file.name}>
                           {file.name}
                         </p>
-                        <p className="text-[11px] text-slate-400 font-mono mt-0.5">
+                        <p className="text-[11px] text-slate-500 dark:text-slate-400 font-mono mt-0.5">
                           {formatBytes(file.size)}
                         </p>
                       </div>
@@ -803,10 +793,10 @@ export default function SenderView({
                         e.stopPropagation();
                         removeFile(idx);
                       }}
-                      className="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-900 transition"
+                      className="p-1.5 text-slate-400 hover:text-rose-600 dark:hover:text-white rounded-lg hover:bg-slate-200 dark:hover:bg-slate-900 transition"
                       title="Remove file"
                     >
-                      <Trash2 className="w-4 h-4 text-indigo-400" />
+                      <Trash2 className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
                     </button>
                   </div>
                 ))}
@@ -817,14 +807,14 @@ export default function SenderView({
 
         {/* Upload Progress Bar */}
         {isUploading && (
-          <div className="glass-panel rounded-2xl p-4 border border-slate-800 space-y-2 bg-slate-900/70">
-            <div className="flex justify-between text-xs text-slate-300 font-medium">
+          <div className="rounded-2xl p-4 border border-slate-200 dark:border-slate-800 space-y-2 bg-white dark:bg-slate-900/70 shadow-sm">
+            <div className="flex justify-between text-xs text-slate-700 dark:text-slate-300 font-medium">
               <span>Uploading & preparing files for LAN transfer...</span>
               <span>{uploadProgress}%</span>
             </div>
-            <div className="w-full bg-slate-950 h-2.5 rounded-full overflow-hidden">
+            <div className="w-full bg-slate-100 dark:bg-slate-950 h-2.5 rounded-full overflow-hidden">
               <div
-                className="bg-indigo-600 h-full rounded-full transition-all duration-300"
+                className="bg-indigo-600 h-full rounded-full transition-all duration-200"
                 style={{ width: `${uploadProgress}%` }}
               ></div>
             </div>
@@ -835,7 +825,7 @@ export default function SenderView({
         <button
           type="submit"
           disabled={isUploading || selectedFiles.length === 0}
-          className="w-full py-3.5 px-6 rounded-2xl bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-sm shadow-xl shadow-indigo-600/20 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+          className="w-full py-3.5 px-6 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-sm shadow-md shadow-indigo-600/20 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
         >
           {isUploading ? (
             <>

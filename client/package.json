@@ -15,7 +15,8 @@
     "socket.io-client": "^4.7.5",
     "canvas-confetti": "^1.9.3",
     "jszip": "^3.10.1",
-    "react-router-dom": "^6.26.1"
+    "react-router-dom": "^6.26.1",
+    "qrcode": "^1.5.4"
   },
   "devDependencies": {
     "@types/react": "^18.3.5",
