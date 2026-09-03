@@ -156,8 +156,41 @@ const io = new Server(server, {
   maxHttpBufferSize: 1e8 // 100MB
 });
 
+// Helper: get list of active sessions with sender names, group names, and connection status
+function getActiveSessionsList() {
+  const list = [];
+  for (const [code, room] of rooms.entries()) {
+    list.push({
+      code: room.code,
+      groupName: room.groupName,
+      senderName: room.senderName || 'Anonymous Sender',
+      createdAt: room.createdAt,
+      fileCount: room.files ? room.files.length : 0,
+      totalSize: room.files ? room.files.reduce((a, f) => a + (f.size || 0), 0) : 0,
+      receiversCount: room.receivers ? room.receivers.length : 0,
+      connected: true
+    });
+  }
+  return list;
+}
+
+function broadcastActiveSessions() {
+  const list = getActiveSessionsList();
+  io.emit('active_sessions_update', list);
+}
+
 io.on('connection', (socket) => {
   console.log(`[Socket] New connection: ${socket.id}`);
+
+  // Emit current active sessions list on connection
+  socket.emit('active_sessions_update', getActiveSessionsList());
+
+  // Client requests list of active sessions
+  socket.on('get_active_sessions', (callback) => {
+    const list = getActiveSessionsList();
+    if (typeof callback === 'function') callback({ success: true, sessions: list });
+    socket.emit('active_sessions_update', list);
+  });
 
   // Join a room with 4-digit code
   socket.on('join_room', ({ code, role, name }) => {
@@ -280,6 +313,7 @@ io.on('connection', (socket) => {
     if (targetSocketId) {
       io.to(targetSocketId).emit('room_state', payload);
     }
+    broadcastActiveSessions();
   });
 
   // Receiver asks for room data via Socket.IO directly
@@ -470,13 +504,24 @@ app.post('/api/upload', upload.array('files', 100), (req, res) => {
         files: room.files
       }
     });
+
+    // Notify all clients of new/updated active session
+    broadcastActiveSessions();
   } catch (error) {
     console.error('Upload error:', error);
     res.status(500).json({ success: false, error: error.message });
   }
 });
 
-// 4. Get room details by 4-digit code (for receiver)
+// 4. Get all active sessions on network (shows all send name list with connected status)
+app.get('/api/active-sessions', (req, res) => {
+  res.json({
+    success: true,
+    sessions: getActiveSessionsList()
+  });
+});
+
+// 5. Get room details by 4-digit code (for receiver)
 app.get('/api/room/:code', (req, res) => {
   const code = req.params.code?.trim();
   if (!code || !/^\d{4}$/.test(code)) {
@@ -678,6 +723,7 @@ app.delete('/api/room/:code', (req, res) => {
       }
     }
     rooms.delete(code);
+    broadcastActiveSessions();
   }
 
   res.json({ success: true, message: 'Session closed.' });

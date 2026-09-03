@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { NavLink, Link, useNavigate } from 'react-router-dom';
+import { NavLink, Link, useNavigate, useLocation } from 'react-router-dom';
 import { 
   UploadCloud, DownloadCloud, Home, QrCode, Wifi, Menu, X, 
   Sun, Moon, Layers, Trash2, ExternalLink, PlusCircle, Copy, Check 
@@ -14,9 +14,25 @@ export default function Header({ networkInfo, onOpenQr }) {
   const [copiedCode, setCopiedCode] = useState(null);
 
   const { theme, toggleTheme, isDark } = useTheme();
-  const { sessions, selectedCode, setSelectedCode, closeSession, activeSessionCount } = useSessions();
+  const { 
+    sessions, 
+    allActiveSessions = [], 
+    selectedCode, 
+    setSelectedCode, 
+    closeSession, 
+    activeSessionCount, 
+    refreshActiveSessions 
+  } = useSessions();
   const dropdownRef = useRef(null);
   const navigate = useNavigate();
+  const location = useLocation();
+
+  // USER REQUESTED: When user changes tab (Home to Receive or Send), refresh and show all send name list
+  useEffect(() => {
+    if (typeof refreshActiveSessions === 'function') {
+      refreshActiveSessions();
+    }
+  }, [location.pathname, refreshActiveSessions]);
 
   // Close dropdown on click outside
   useEffect(() => {
@@ -41,9 +57,13 @@ export default function Header({ networkInfo, onOpenQr }) {
     }`;
 
   const handleOpenSession = (code) => {
-    setSelectedCode(code);
+    if (location.pathname === '/receive') {
+      navigate(`/receive?code=${code}`);
+    } else {
+      setSelectedCode(code);
+      navigate('/send');
+    }
     setSessionsDropdownOpen(false);
-    navigate('/send');
   };
 
   const handleCreateNewGroup = () => {
@@ -155,12 +175,12 @@ export default function Header({ networkInfo, onOpenQr }) {
                   </button>
                 </div>
 
-                <div className="max-h-72 overflow-y-auto p-2 space-y-2">
-                  {sessions.length === 0 ? (
+                <div className="max-h-80 overflow-y-auto p-2 space-y-2">
+                  {allActiveSessions.length === 0 ? (
                     <div className="text-center py-6 px-4 space-y-2 text-slate-500 dark:text-slate-400">
                       <Layers className="w-8 h-8 text-indigo-600/30 dark:text-indigo-400/40 mx-auto" />
-                      <p className="text-xs font-semibold text-slate-800 dark:text-white">No Active Sessions</p>
-                      <p className="text-[11px]">Start sharing files to create an active session.</p>
+                      <p className="text-xs font-semibold text-slate-800 dark:text-white">No Active Senders Found</p>
+                      <p className="text-[11px]">Start sharing files to create an active session on your network.</p>
                       <button
                         onClick={handleCreateNewGroup}
                         className="mt-2 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-indigo-600 text-white text-xs font-semibold shadow-sm hover:bg-indigo-700 transition"
@@ -170,8 +190,8 @@ export default function Header({ networkInfo, onOpenQr }) {
                       </button>
                     </div>
                   ) : (
-                    sessions.map((s) => {
-                      const totalBytes = s.files?.reduce((acc, f) => acc + (f.size || 0), 0) || 0;
+                    allActiveSessions.map((s) => {
+                      const totalBytes = s.totalSize || 0;
                       const isSelected = selectedCode === s.code;
 
                       return (
@@ -185,44 +205,69 @@ export default function Header({ networkInfo, onOpenQr }) {
                           }`}
                         >
                           <div className="min-w-0 flex-1">
-                            <div className="flex items-center gap-2">
-                              <p className="text-xs font-bold text-slate-900 dark:text-white truncate">
+                            {/* Group & Sender Name */}
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <p className="text-xs font-bold text-slate-900 dark:text-white truncate" title={s.groupName}>
                                 {s.groupName}
                               </p>
                               {isSelected && (
-                                <span className="text-[10px] font-semibold px-1.5 py-0.2 rounded bg-indigo-600 text-white">
+                                <span className="text-[9px] font-semibold px-1.5 py-0.2 rounded bg-indigo-600 text-white">
                                   Current
                                 </span>
                               )}
                             </div>
-                            <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 font-normal">
-                              {s.files?.length || 0} files • {formatBytes(totalBytes)}
+
+                            {/* Sender Name */}
+                            <p className="text-[11px] text-slate-600 dark:text-slate-300 font-medium truncate mt-0.5">
+                              Sender: <span className="text-indigo-600 dark:text-indigo-400 font-semibold">{s.senderName}</span>
+                            </p>
+
+                            {/* Files & Size */}
+                            <p className="text-[10px] text-slate-400 dark:text-slate-500 font-normal">
+                              {s.fileCount || s.files?.length || 0} files • {formatBytes(totalBytes)}
                             </p>
                           </div>
 
-                          <div className="flex items-center gap-1.5 flex-shrink-0">
-                            {/* PIN Pill with Copy */}
-                            <button
-                              onClick={(e) => handleCopyPin(e, s.code)}
-                              className="px-2 py-1 rounded-lg bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-indigo-400 font-mono font-bold text-xs text-indigo-700 dark:text-indigo-300 flex items-center gap-1"
-                              title="Copy PIN code"
-                            >
-                              <span>{s.code}</span>
-                              {copiedCode === s.code ? (
-                                <Check className="w-3 h-3 text-emerald-500" />
-                              ) : (
-                                <Copy className="w-3 h-3 text-slate-400" />
-                              )}
-                            </button>
+                          <div className="flex flex-col items-end gap-1.5 flex-shrink-0">
+                            {/* USER REQUESTED: Icon & badge showing connected (green) or not connected (red) */}
+                            {s.connected ? (
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/20 text-emerald-700 dark:text-emerald-400 text-[10px] font-bold">
+                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                                Connected
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-rose-50 dark:bg-rose-500/10 border border-rose-200 dark:border-rose-500/20 text-rose-700 dark:text-rose-400 text-[10px] font-bold">
+                                <span className="w-1.5 h-1.5 rounded-full bg-rose-500"></span>
+                                Not Connected
+                              </span>
+                            )}
 
-                            {/* Close Session Button */}
-                            <button
-                              onClick={(e) => handleCloseSessionClick(e, s.code, s.groupName)}
-                              className="p-1.5 rounded-lg hover:bg-rose-50 dark:hover:bg-rose-500/20 text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 transition"
-                              title="Close this sending session"
-                            >
-                              <Trash2 className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
-                            </button>
+                            <div className="flex items-center gap-1.5">
+                              {/* PIN Pill with Copy */}
+                              <button
+                                onClick={(e) => handleCopyPin(e, s.code)}
+                                className="px-2 py-0.5 rounded-lg bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-indigo-400 font-mono font-bold text-[11px] text-indigo-700 dark:text-indigo-300 flex items-center gap-1"
+                                title="Copy 4-Digit PIN"
+                              >
+                                <span>{s.code}</span>
+                                {copiedCode === s.code ? (
+                                  <Check className="w-3 h-3 text-emerald-500" />
+                                ) : (
+                                  <Copy className="w-3 h-3 text-slate-400" />
+                                )}
+                              </button>
+
+                              {/* Close Session Button (if sender is owner) */}
+                              {s.isOwner && (
+                                <button
+                                  onClick={(e) => handleCloseSessionClick(e, s.code, s.groupName)}
+                                  className="p-1 rounded-lg hover:bg-rose-50 dark:hover:bg-rose-500/20 text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 transition"
+                                  title="Close this sending session"
+                                >
+                                  <Trash2 className="w-3 h-3 text-indigo-600 dark:text-indigo-400" />
+                                </button>
+                              )}
+                            </div>
                           </div>
                         </div>
                       );

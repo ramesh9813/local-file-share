@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { io } from 'socket.io-client';
 import { 
   AlertCircle, CheckCircle, Info 
 } from 'lucide-react';
@@ -13,6 +12,7 @@ import QrModal from './components/QrModal';
 import { ThemeProvider } from './context/ThemeContext';
 import { SessionProvider } from './context/SessionContext';
 import { getApiBaseUrl, safeFetchJson } from './utils/apiClient';
+import { getSocket } from './utils/socket';
 
 export default function App() {
   const [networkInfo, setNetworkInfo] = useState(null);
@@ -26,7 +26,7 @@ export default function App() {
     setToasts(prev => [...prev, { id, message, type }]);
     setTimeout(() => {
       setToasts(prev => prev.filter(t => t.id !== id));
-    }, 4500);
+    }, 4000);
   };
 
   // Fetch Local Network Information
@@ -42,28 +42,10 @@ export default function App() {
       });
   }, []);
 
-  // Initialize Socket.IO connection
+  // Initialize Socket.IO connection via shared singleton
   useEffect(() => {
-    const baseUrl = getApiBaseUrl();
-    const newSocket = io(baseUrl || undefined, {
-      transports: ['websocket', 'polling'],
-      reconnectionAttempts: 10,
-      reconnectionDelay: 1000
-    });
-
-    newSocket.on('connect', () => {
-      console.log('Connected to Socket server:', newSocket.id);
-    });
-
-    newSocket.on('connect_error', (error) => {
-      console.warn('Socket connection error:', error.message);
-    });
-
-    setSocket(newSocket);
-
-    return () => {
-      newSocket.disconnect();
-    };
+    const s = getSocket();
+    setSocket(s);
   }, []);
 
   return (

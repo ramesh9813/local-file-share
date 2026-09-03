@@ -4,10 +4,11 @@ import {
   DownloadCloud, UploadCloud, Eye, Download, Archive, 
   FileText, Image as ImageIcon, Video, Music, File, 
   ArrowLeft, RefreshCw, AlertCircle, ShieldCheck, 
-  Wifi, FolderDown 
+  Wifi, FolderDown, Users, CheckCircle2, XCircle 
 } from 'lucide-react';
 import { formatBytes, getFileCategory, isPreviewable } from '../utils/fileHelpers';
 import { safeFetchJson, getApiBaseUrl } from '../utils/apiClient';
+import { useSessions } from '../context/SessionContext';
 import FilePreviewModal from './FilePreviewModal';
 import confetti from 'canvas-confetti';
 
@@ -23,6 +24,15 @@ export default function ReceiverView({
   const [pinDigits, setPinDigits] = useState(['', '', '', '']);
   const [receiverName, setReceiverName] = useState(() => localStorage.getItem('localshare_recv_name') || '');
   
+  // Active Sessions from Context
+  const { allActiveSessions = [], refreshActiveSessions } = useSessions();
+
+  useEffect(() => {
+    if (typeof refreshActiveSessions === 'function') {
+      refreshActiveSessions();
+    }
+  }, [refreshActiveSessions]);
+
   // Connection state
   const [isConnecting, setIsConnecting] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
@@ -123,17 +133,27 @@ export default function ReceiverView({
         if (i < 4) newDigits[i] = d;
       });
       setPinDigits(newDigits);
+      setErrorMessage('');
       const nextIndex = Math.min(pasted.length, 3);
       inputRefs[nextIndex].current?.focus();
+      if (pasted.length === 4) {
+        handleConnect(pasted.join(''));
+      }
       return;
     }
 
     const newDigits = [...pinDigits];
     newDigits[index] = cleanValue;
     setPinDigits(newDigits);
+    setErrorMessage('');
 
     if (index < 3 && cleanValue) {
       inputRefs[index + 1].current?.focus();
+    }
+
+    const full = newDigits.join('');
+    if (full.length === 4) {
+      handleConnect(full);
     }
   };
 
@@ -469,6 +489,53 @@ export default function ReceiverView({
 
       {/* 4-Digit Code Box Card */}
       <div className="rounded-3xl p-6 sm:p-8 border border-slate-200/90 dark:border-slate-800 space-y-6 bg-white dark:bg-slate-900/70 shadow-sm">
+        {/* USER REQUESTED: Connection Status Bar showing Connected (Green) or Not Connected (Red) */}
+        {sessionData ? (
+          <div className="flex items-center justify-between p-3.5 rounded-2xl bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-500/30 text-emerald-700 dark:text-emerald-400 text-xs font-semibold animate-fadeIn">
+            <div className="flex items-center gap-2">
+              <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
+              <span className="font-bold">Status: Connected</span>
+              <span className="font-normal text-emerald-600 dark:text-emerald-300">• Connected to {sessionData.senderName} ({sessionData.groupName})</span>
+            </div>
+            <span className="px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-500/20 text-emerald-800 dark:text-emerald-300 text-[10px] font-bold">
+              CONNECTED
+            </span>
+          </div>
+        ) : isConnecting ? (
+          <div className="flex items-center justify-between p-3.5 rounded-2xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-500/30 text-amber-700 dark:text-amber-400 text-xs font-semibold animate-fadeIn">
+            <div className="flex items-center gap-2">
+              <RefreshCw className="w-3.5 h-3.5 animate-spin text-amber-600" />
+              <span className="font-bold">Status: Verifying PIN...</span>
+              <span className="font-normal text-amber-600 dark:text-amber-300">• Checking sender on local network</span>
+            </div>
+            <span className="px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-500/20 text-amber-800 dark:text-amber-300 text-[10px] font-bold">
+              CHECKING
+            </span>
+          </div>
+        ) : errorMessage ? (
+          <div className="flex items-center justify-between p-3.5 rounded-2xl bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-500/30 text-rose-700 dark:text-rose-400 text-xs font-semibold animate-fadeIn">
+            <div className="flex items-center gap-2">
+              <span className="w-2.5 h-2.5 rounded-full bg-rose-500"></span>
+              <span className="font-bold">Status: Not Connected</span>
+              <span className="font-normal text-rose-600 dark:text-rose-300">• {errorMessage}</span>
+            </div>
+            <span className="px-2 py-0.5 rounded-full bg-rose-100 dark:bg-rose-500/20 text-rose-800 dark:text-rose-300 text-[10px] font-bold">
+              NOT CONNECTED
+            </span>
+          </div>
+        ) : (
+          <div className="flex items-center justify-between p-3.5 rounded-2xl bg-rose-50/70 dark:bg-rose-950/20 border border-rose-200 dark:border-rose-500/20 text-rose-700 dark:text-rose-400 text-xs font-semibold">
+            <div className="flex items-center gap-2">
+              <span className="w-2.5 h-2.5 rounded-full bg-rose-500"></span>
+              <span className="font-bold">Status: Not Connected</span>
+              <span className="font-normal text-slate-500 dark:text-slate-400">• Enter correct 4-digit PIN to connect</span>
+            </div>
+            <span className="px-2 py-0.5 rounded-full bg-rose-100 dark:bg-rose-500/20 text-rose-800 dark:text-rose-300 text-[10px] font-bold">
+              NOT CONNECTED
+            </span>
+          </div>
+        )}
+
         <div className="space-y-4">
           <label className="block text-center text-xs font-bold uppercase tracking-wider text-indigo-600 dark:text-indigo-400">
             Enter 4-Digit PIN Code
@@ -512,7 +579,7 @@ export default function ReceiverView({
 
           {errorMessage && (
             <div className="flex items-center gap-2 p-3 rounded-xl bg-rose-50 dark:bg-slate-950 border border-rose-200 dark:border-rose-500/40 text-xs text-rose-700 dark:text-rose-400 animate-fadeIn">
-              <AlertCircle className="w-4 h-4 text-indigo-600 dark:text-indigo-400 flex-shrink-0" />
+              <AlertCircle className="w-4 h-4 text-rose-600 dark:text-rose-400 flex-shrink-0" />
               <span>{errorMessage}</span>
             </div>
           )}
@@ -527,7 +594,7 @@ export default function ReceiverView({
           {isConnecting ? (
             <>
               <RefreshCw className="w-4 h-4 animate-spin text-white" />
-              <span>Connecting & Fetching Files...</span>
+              <span>Connecting & Verifying PIN...</span>
             </>
           ) : (
             <>
@@ -542,6 +609,69 @@ export default function ReceiverView({
           <span>Local network peer-to-peer connection</span>
         </div>
       </div>
+
+      {/* USER REQUESTED: Active Senders List Panel with Connected (Green) or Not Connected (Red) */}
+      {allActiveSessions.length > 0 && (
+        <div className="rounded-3xl p-6 sm:p-7 border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/70 shadow-sm space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Users className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+              <h3 className="text-xs font-bold uppercase tracking-wider text-indigo-600 dark:text-indigo-400">
+                Active Senders on Network ({allActiveSessions.length})
+              </h3>
+            </div>
+            <span className="text-[11px] text-slate-500 dark:text-slate-400 font-normal">
+              Click to auto-fill PIN & connect
+            </span>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {allActiveSessions.map((s) => (
+              <div
+                key={s.code}
+                onClick={() => {
+                  const digits = s.code.split('');
+                  setPinDigits(digits);
+                  setErrorMessage('');
+                  handleConnect(s.code);
+                }}
+                className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-950/70 border border-slate-200 dark:border-slate-800 hover:border-indigo-400 dark:hover:border-indigo-500/50 cursor-pointer transition flex items-center justify-between gap-3 group"
+              >
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2">
+                    <p className="text-xs font-bold text-slate-900 dark:text-white truncate">
+                      {s.groupName}
+                    </p>
+                    {s.connected ? (
+                      <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 text-[9px] font-bold">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                        Connected
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-rose-50 dark:bg-rose-500/10 text-rose-700 dark:text-rose-400 text-[9px] font-bold">
+                        <span className="w-1.5 h-1.5 rounded-full bg-rose-500"></span>
+                        Not Connected
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-[11px] text-slate-600 dark:text-slate-300 mt-0.5">
+                    Sender: <span className="font-semibold text-indigo-600 dark:text-indigo-400">{s.senderName}</span>
+                  </p>
+                  <p className="text-[10px] text-slate-400 font-mono mt-0.5">
+                    {s.fileCount || 0} files • PIN: <span className="font-bold text-slate-800 dark:text-slate-200">{s.code}</span>
+                  </p>
+                </div>
+
+                <button
+                  className="px-3 py-1.5 rounded-xl bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 group-hover:bg-indigo-600 group-hover:text-white text-xs font-semibold transition flex-shrink-0"
+                >
+                  Connect
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
