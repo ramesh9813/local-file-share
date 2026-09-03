@@ -113,18 +113,16 @@ export default function QrModal({ isOpen, onClose, networkInfo, activeCode: prop
             <QrCode className="w-6 h-6 text-indigo-600 dark:text-indigo-400" />
           </div>
           <div>
-            <h3 className="text-lg font-bold text-slate-900 dark:text-white tracking-tight">
-              {chosenSession ? `Group QR: ${chosenSession.groupName}` : 'Connect with QR Code'}
+            <h3 className="text-base font-bold text-slate-900 dark:text-white tracking-tight">
+              {chosenSession ? chosenSession.groupName : 'QR Code'}
             </h3>
             <p className="text-xs text-slate-500 dark:text-slate-400 font-normal mt-0.5">
-              {chosenSession 
-                ? 'Scan to connect directly & download files' 
-                : 'Point any smartphone camera to connect'}
+              Scan with phone camera to connect
             </p>
           </div>
         </div>
 
-        {/* Prominent Group Badge */}
+        {/* Group Badge */}
         {chosenSession && (
           <div className="p-3 mb-4 rounded-2xl bg-indigo-50/80 dark:bg-indigo-500/10 border border-indigo-200 dark:border-indigo-500/20 flex items-center justify-between">
             <div className="space-y-0.5">
@@ -135,10 +133,10 @@ export default function QrModal({ isOpen, onClose, networkInfo, activeCode: prop
                 </span>
               </div>
               <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                {chosenSession.files?.length || 0} file(s) ready for download
+                {chosenSession.files?.length || 0} file(s)
               </p>
             </div>
-            <div className="flex items-center gap-1 px-2.5 py-1 rounded-xl bg-white dark:bg-slate-900 border border-indigo-200 dark:border-indigo-500/30">
+            <div className="flex items-center gap-1 px-2 py-0.5 rounded-xl bg-white dark:bg-slate-900 border border-indigo-200 dark:border-indigo-500/30">
               <span className="text-[10px] text-slate-400 uppercase font-bold">PIN</span>
               <span className="font-mono text-sm font-extrabold text-indigo-600 dark:text-indigo-400">{chosenSession.code}</span>
             </div>
@@ -150,7 +148,7 @@ export default function QrModal({ isOpen, onClose, networkInfo, activeCode: prop
           <div className="mb-4 space-y-1.5">
             <label className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1">
               <Layers className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
-              <span>Select Sharing Target:</span>
+              <span>Target:</span>
             </label>
             <div className="flex items-center gap-1.5 overflow-x-auto pb-1">
               {sessions.map((s) => (
@@ -186,30 +184,30 @@ export default function QrModal({ isOpen, onClose, networkInfo, activeCode: prop
           </div>
         )}
 
-        {/* High-Contrast QR Code Card with Standard Quiet Zone */}
-        <div className="flex flex-col items-center justify-center p-5 bg-slate-50 dark:bg-slate-950/80 rounded-2xl border border-slate-200 dark:border-slate-800 mb-4">
-          <div className="p-3 bg-white rounded-2xl shadow-sm border border-slate-200 mb-3 flex items-center justify-center">
+        {/* High-Contrast QR Code Card */}
+        <div className="flex flex-col items-center justify-center p-4 bg-slate-50 dark:bg-slate-950/80 rounded-2xl border border-slate-200 dark:border-slate-800 mb-3">
+          <div className="p-3 bg-white rounded-2xl shadow-sm border border-slate-200 mb-2.5 flex items-center justify-center">
             {isGenerating ? (
-              <div className="flex flex-col items-center justify-center gap-2 text-slate-500 text-xs py-16 px-12">
-                <RefreshCw className="w-8 h-8 text-indigo-600 dark:text-indigo-400 animate-spin" />
-                <span className="mt-2 font-medium">Generating QR...</span>
+              <div className="flex flex-col items-center justify-center gap-2 text-slate-500 text-xs py-14 px-12">
+                <RefreshCw className="w-7 h-7 text-indigo-600 dark:text-indigo-400 animate-spin" />
+                <span className="font-medium">Generating...</span>
               </div>
             ) : qrDataUrl ? (
               <img 
                 src={qrDataUrl} 
-                alt="File Share QR Code" 
-                className="w-56 h-56 object-contain rounded-lg"
+                alt="QR Code" 
+                className="w-52 h-52 object-contain rounded-lg"
               />
             ) : (
-              <div className="text-slate-400 text-xs py-16 px-12">Failed to render QR</div>
+              <div className="text-slate-400 text-xs py-14 px-12">Failed to render QR</div>
             )}
           </div>
 
           <div className="flex items-center justify-between w-full max-w-xs text-xs text-slate-600 dark:text-slate-400 font-normal">
             <span className="flex items-center gap-1.5">
-              <Wifi className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400 animate-pulse" />
+              <Wifi className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
               <span>
-                {chosenCode ? `Autofills PIN: ${chosenCode}` : 'Opens Receive Page'}
+                {chosenCode ? `PIN: ${chosenCode}` : 'Receive Page'}
               </span>
             </span>
             {qrDataUrl && (
@@ -218,16 +216,16 @@ export default function QrModal({ isOpen, onClose, networkInfo, activeCode: prop
                 className="flex items-center gap-1 text-indigo-600 dark:text-indigo-400 hover:underline font-semibold"
               >
                 <Download className="w-3.5 h-3.5" />
-                <span>Save Image</span>
+                <span>Save</span>
               </button>
             )}
           </div>
         </div>
 
-        {/* Direct Link Box with One-Click Copy & Open */}
-        <div className="space-y-1.5 mb-3">
+        {/* Direct Link Box */}
+        <div className="space-y-1">
           <label className="text-[11px] font-bold uppercase tracking-wider text-indigo-600 dark:text-indigo-400">
-            Encoded Web URL
+            Direct Link
           </label>
           <div className="flex items-center gap-2 bg-slate-50 dark:bg-slate-950/80 border border-slate-200 dark:border-slate-800 rounded-xl p-1.5 pr-2">
             <span className="text-xs font-mono text-slate-800 dark:text-indigo-300 truncate flex-1 px-2 font-normal select-all">
@@ -246,16 +244,12 @@ export default function QrModal({ isOpen, onClose, networkInfo, activeCode: prop
               target="_blank"
               rel="noreferrer"
               className="p-1.5 text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-800 transition flex-shrink-0"
-              title="Open URL in new tab"
+              title="Open link"
             >
               <ExternalLink className="w-4 h-4" />
             </a>
           </div>
         </div>
-
-        <p className="text-[11px] text-slate-500 dark:text-slate-400 text-center font-normal">
-          Any camera app (iPhone Camera, Google Lens, Samsung Camera) can scan this QR code directly.
-        </p>
       </div>
     </div>
   );

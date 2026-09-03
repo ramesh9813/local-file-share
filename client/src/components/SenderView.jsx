@@ -467,156 +467,146 @@ export default function SenderView({
           MODE A: VIEWING AN ACTIVE GROUP SESSION DASHBOARD
          ───────────────────────────────────────────────────────────── */}
       {currentSession ? (
-        <div className="space-y-6">
+        <div className="space-y-5">
           {/* Top Bar for Current Session */}
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400 font-normal">
-              <span>Viewing Group Session:</span>
+              <span>Group:</span>
               <span className="font-bold text-slate-900 dark:text-white">{currentSession.groupName}</span>
-              <span className="text-slate-400">•</span>
-              <span>All other groups stay active concurrently</span>
             </div>
 
-            {/* USER REQUESTED: Close sending session button */}
+            {/* Close sending session button */}
             <button
               onClick={handleCloseThisSession}
-              className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-white dark:bg-slate-900 hover:bg-rose-50 dark:hover:bg-rose-950/30 text-rose-600 dark:text-rose-400 border border-slate-200 dark:border-slate-800 hover:border-rose-300 text-xs font-semibold transition shadow-sm"
-              title="Close only this sending session"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white dark:bg-slate-900 hover:bg-rose-50 dark:hover:bg-rose-950/30 text-rose-600 dark:text-rose-400 border border-slate-200 dark:border-slate-800 hover:border-rose-300 text-xs font-semibold transition shadow-sm"
+              title="Close only this session"
             >
               <Trash2 className="w-3.5 h-3.5 text-rose-600 dark:text-rose-400" />
-              <span>Close This Session</span>
+              <span>Close Group</span>
             </button>
           </div>
 
-          {/* USER REQUESTED: Place Receiver Connection Status at the TOP */}
-          <div className="rounded-2xl p-4 sm:p-5 border border-slate-200 dark:border-slate-800 flex items-center justify-between gap-4 bg-white dark:bg-slate-900/70 shadow-sm">
+          {/* Receiver Connection Status */}
+          <div className="rounded-2xl p-4 border border-slate-200 dark:border-slate-800 flex items-center justify-between gap-4 bg-white dark:bg-slate-900/70 shadow-sm">
             <div className="flex items-center gap-3">
-              <div className="p-2.5 rounded-xl bg-indigo-50 dark:bg-indigo-500/10 border border-indigo-100 dark:border-indigo-500/20 text-indigo-600 dark:text-indigo-400 flex-shrink-0">
-                <Users className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
+              <div className="p-2 rounded-xl bg-indigo-50 dark:bg-indigo-500/10 border border-indigo-100 dark:border-indigo-500/20 text-indigo-600 dark:text-indigo-400 flex-shrink-0">
+                <Users className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
               </div>
               <div>
-                <h4 className="text-sm font-semibold text-slate-900 dark:text-white">
-                  Receiver Connection Status
+                <h4 className="text-xs font-bold text-slate-900 dark:text-white">
+                  Receiver Status
                 </h4>
-                <p className="text-xs text-slate-500 dark:text-slate-400 font-normal mt-0.5">
+                <p className="text-[11px] text-slate-500 dark:text-slate-400 font-normal mt-0.5">
                   {connectedReceivers.length > 0 
-                    ? `${connectedReceivers.length} receiver(s) connected to "${currentSession.groupName}"` 
-                    : 'Waiting for receiver to enter this PIN or scan QR...'}
+                    ? `${connectedReceivers.length} receiver(s) connected` 
+                    : 'Waiting for receivers...'}
                 </p>
               </div>
             </div>
 
             <div>
               {connectedReceivers.length > 0 ? (
-                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/20 text-emerald-700 dark:text-emerald-400 text-xs font-semibold">
-                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/20 text-emerald-700 dark:text-emerald-400 text-xs font-semibold">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
                   Connected ({connectedReceivers.length})
                 </span>
               ) : (
-                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-indigo-50 dark:bg-indigo-500/10 border border-indigo-200 dark:border-indigo-500/20 text-indigo-700 dark:text-indigo-400 text-xs font-semibold">
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-indigo-50 dark:bg-indigo-500/10 border border-indigo-200 dark:border-indigo-500/20 text-indigo-700 dark:text-indigo-400 text-xs font-semibold">
                   <RefreshCw className="w-3 h-3 animate-spin text-indigo-600 dark:text-indigo-400" />
-                  Listening...
+                  Listening
                 </span>
               )}
             </div>
           </div>
 
-          {/* USER REQUESTED: 4-Digit PIN Card with Integrated Who Downloaded Person List Just Below */}
-          <div className="rounded-3xl p-6 sm:p-8 border border-slate-200 dark:border-slate-800 relative overflow-hidden bg-white dark:bg-slate-900/70 shadow-sm space-y-6">
-            <div className="flex flex-col md:flex-row items-center justify-between gap-6">
-              <div className="space-y-2 text-center md:text-left">
-                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-50 dark:bg-indigo-500/10 border border-indigo-200 dark:border-indigo-500/20 text-indigo-700 dark:text-indigo-400 text-xs font-semibold">
-                  <Wifi className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400 animate-pulse" />
-                  <span>Active Session • Kept alive in background</span>
+          {/* 4-Digit PIN Card */}
+          <div className="rounded-3xl p-6 border border-slate-200 dark:border-slate-800 relative overflow-hidden bg-white dark:bg-slate-900/70 shadow-sm space-y-5">
+            <div className="flex flex-col md:flex-row items-center justify-between gap-5">
+              <div className="space-y-1 text-center md:text-left">
+                <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-indigo-50 dark:bg-indigo-500/10 border border-indigo-200 dark:border-indigo-500/20 text-indigo-700 dark:text-indigo-400 text-xs font-semibold">
+                  <Wifi className="w-3 h-3 text-indigo-600 dark:text-indigo-400 animate-pulse" />
+                  <span>Active Session</span>
                 </div>
-                <h2 className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white tracking-tight">
+                <h2 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white tracking-tight">
                   {currentSession.groupName}
                 </h2>
-                <p className="text-sm text-slate-600 dark:text-slate-400 font-normal leading-relaxed">
-                  Shared by <span className="font-semibold text-slate-900 dark:text-slate-200">{currentSession.senderName}</span> • Give this PIN or scan the group QR code below
+                <p className="text-xs text-slate-500 dark:text-slate-400 font-normal">
+                  Shared by <span className="font-semibold text-slate-700 dark:text-slate-300">{currentSession.senderName}</span>
                 </p>
               </div>
 
               {/* 4-Digit PIN Box with Group QR Button */}
-              <div className="flex flex-col items-center gap-2">
-                <span className="text-xs font-bold uppercase tracking-wider text-indigo-600 dark:text-indigo-400">
-                  Receiver 4-Digit PIN
+              <div className="flex flex-col items-center gap-1.5">
+                <span className="text-[11px] font-bold uppercase tracking-wider text-indigo-600 dark:text-indigo-400">
+                  4-Digit PIN
                 </span>
-                <div className="flex items-center gap-2 bg-slate-50 dark:bg-slate-950/90 border border-slate-200 dark:border-slate-800 rounded-2xl p-2.5 px-4 shadow-sm">
-                  <span className="text-4xl sm:text-5xl font-extrabold tracking-widest font-mono text-slate-900 dark:text-white">
+                <div className="flex items-center gap-2 bg-slate-50 dark:bg-slate-950/90 border border-slate-200 dark:border-slate-800 rounded-2xl p-2 px-3.5 shadow-sm">
+                  <span className="text-3xl sm:text-4xl font-extrabold tracking-widest font-mono text-slate-900 dark:text-white">
                     {currentSession.code}
                   </span>
                   <div className="flex items-center gap-1.5 ml-2">
                     <button
                       onClick={handleCopyCode}
                       title="Copy PIN"
-                      className="p-2.5 rounded-xl bg-indigo-50 dark:bg-indigo-500/10 hover:bg-indigo-100 dark:hover:bg-indigo-500/20 border border-indigo-200 dark:border-indigo-500/20 text-indigo-600 dark:text-indigo-400 transition"
+                      className="p-2 rounded-xl bg-indigo-50 dark:bg-indigo-500/10 hover:bg-indigo-100 dark:hover:bg-indigo-500/20 border border-indigo-200 dark:border-indigo-500/20 text-indigo-600 dark:text-indigo-400 transition"
                     >
-                      {copiedCode ? <Check className="w-5 h-5 text-indigo-600 dark:text-indigo-400" /> : <Copy className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />}
+                      {copiedCode ? <Check className="w-4 h-4 text-indigo-600 dark:text-indigo-400" /> : <Copy className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />}
                     </button>
 
-                    {/* USER REQUESTED: Group Wise QR Button */}
                     <button
                       onClick={() => onOpenQr(currentSession.code)}
-                      title={`Generate Group QR Code for "${currentSession.groupName}" - Scan to connect directly & download files`}
-                      className="p-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm transition flex items-center gap-1.5 text-xs font-semibold"
+                      title="Group QR Code"
+                      className="p-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm transition flex items-center gap-1 text-xs font-semibold"
                     >
-                      <QrCode className="w-5 h-5 text-white" />
-                      <span className="hidden sm:inline">Group QR</span>
+                      <QrCode className="w-4 h-4 text-white" />
+                      <span>QR</span>
                     </button>
                   </div>
                 </div>
               </div>
             </div>
 
-            {/* Quick link bar with Generate Group QR button */}
-            <div className="pt-5 border-t border-slate-100 dark:border-slate-800/80 flex flex-wrap items-center justify-between gap-3">
+            {/* Quick link bar */}
+            <div className="pt-4 border-t border-slate-100 dark:border-slate-800/80 flex flex-wrap items-center justify-between gap-2.5">
               <div className="flex items-center gap-2 text-xs text-slate-600 dark:text-slate-400 font-normal">
-                <Wifi className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
-                <span>Direct Link:</span>
-                <span className="font-mono text-indigo-600 dark:text-indigo-300 max-w-[280px] sm:max-w-md truncate">
-                  {`${window.location.origin}/receive?code=${currentSession.code}&group=${encodeURIComponent(currentSession.groupName)}`}
+                <Wifi className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
+                <span className="font-mono text-indigo-600 dark:text-indigo-300 max-w-[260px] sm:max-w-md truncate">
+                  {`${window.location.origin}/receive?code=${currentSession.code}`}
                 </span>
               </div>
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => onOpenQr(currentSession.code)}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold shadow-sm transition"
-                  title="Generate QR code for this group"
+                  className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold shadow-sm transition"
+                  title="Group QR Code"
                 >
-                  <QrCode className="w-3.5 h-3.5 text-white" />
-                  <span>Generate Group QR</span>
+                  <QrCode className="w-3 h-3 text-white" />
+                  <span>QR Code</span>
                 </button>
                 <button
                   onClick={handleCopyLink}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 hover:border-indigo-400 dark:hover:border-indigo-500/40 text-slate-700 dark:text-slate-200 text-xs font-medium transition"
+                  className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 hover:border-indigo-400 text-slate-700 dark:text-slate-200 text-xs font-medium transition"
                 >
-                  {copiedLink ? <Check className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" /> : <Copy className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />}
-                  <span>{copiedLink ? 'Link Copied' : 'Copy Direct Link'}</span>
+                  {copiedLink ? <Check className="w-3 h-3 text-indigo-600 dark:text-indigo-400" /> : <Copy className="w-3 h-3 text-indigo-600 dark:text-indigo-400" />}
+                  <span>{copiedLink ? 'Copied' : 'Copy Link'}</span>
                 </button>
               </div>
             </div>
 
-            {/* USER REQUESTED: WHO DOWNLOADED PERSON LIST DIRECTLY BELOW IN SAME PIN CARD */}
-            <div className="pt-5 border-t border-slate-100 dark:border-slate-800/80 space-y-3.5">
+            {/* Downloads List */}
+            <div className="pt-4 border-t border-slate-100 dark:border-slate-800/80 space-y-3">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <UserCheck className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
                   <h3 className="text-xs font-bold uppercase tracking-wider text-indigo-600 dark:text-indigo-400">
-                    Who Downloaded Files ({downloadActivities.length})
+                    Downloads ({downloadActivities.length})
                   </h3>
                 </div>
-                {downloadActivities.length > 0 && (
-                  <span className="text-[11px] text-slate-500 dark:text-slate-400 font-normal">
-                    Live download history for PIN {currentSession.code}
-                  </span>
-                )}
               </div>
 
               {downloadActivities.length === 0 ? (
-                <div className="p-4 rounded-2xl bg-slate-50/80 dark:bg-slate-950/40 border border-slate-200/80 dark:border-slate-800 text-center py-5">
-                  <p className="text-xs font-semibold text-slate-800 dark:text-white">No files downloaded yet for this group</p>
-                  <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">When a receiver downloads a file or ZIP, their person card will appear here in real-time.</p>
+                <div className="p-3 rounded-xl bg-slate-50/80 dark:bg-slate-950/40 border border-slate-200/80 dark:border-slate-800 text-center py-4">
+                  <p className="text-xs font-medium text-slate-500 dark:text-slate-400">No downloads yet.</p>
                 </div>
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-60 overflow-y-auto pr-1">
@@ -650,14 +640,14 @@ export default function SenderView({
           </div>
 
           {/* Shared Files List */}
-          <div className="rounded-3xl p-6 sm:p-8 border border-slate-200 dark:border-slate-800 space-y-6 bg-white dark:bg-slate-900/70 shadow-sm">
-            <div className="flex flex-wrap items-center justify-between gap-4 pb-4 border-b border-slate-100 dark:border-slate-800">
+          <div className="rounded-3xl p-6 border border-slate-200 dark:border-slate-800 space-y-5 bg-white dark:bg-slate-900/70 shadow-sm">
+            <div className="flex flex-wrap items-center justify-between gap-4 pb-3 border-b border-slate-100 dark:border-slate-800">
               <div>
-                <h3 className="text-lg font-bold text-slate-900 dark:text-white">
-                  Files in This Session ({currentSession.files?.length || 0})
+                <h3 className="text-sm font-bold text-slate-900 dark:text-white">
+                  Files ({currentSession.files?.length || 0})
                 </h3>
-                <p className="text-xs text-slate-500 dark:text-slate-400 font-normal mt-0.5">
-                  Total size: {formatBytes(currentSession.files?.reduce((a, f) => a + f.size, 0) || 0)}
+                <p className="text-xs text-slate-500 dark:text-slate-400 font-mono mt-0.5">
+                  {formatBytes(currentSession.files?.reduce((a, f) => a + f.size, 0) || 0)}
                 </p>
               </div>
 
@@ -672,29 +662,29 @@ export default function SenderView({
                 <button
                   disabled={isAddingMore}
                   onClick={() => addFileInputRef.current?.click()}
-                  className="flex items-center gap-2 px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold transition disabled:opacity-50 shadow-md shadow-indigo-600/20"
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold transition disabled:opacity-50 shadow-md shadow-indigo-600/20"
                 >
-                  {isAddingMore ? <RefreshCw className="w-4 h-4 animate-spin text-white" /> : <PlusCircle className="w-4 h-4 text-white" />}
-                  <span>Add More Files</span>
+                  {isAddingMore ? <RefreshCw className="w-3.5 h-3.5 animate-spin text-white" /> : <PlusCircle className="w-3.5 h-3.5 text-white" />}
+                  <span>Add Files</span>
                 </button>
               </div>
             </div>
 
-            <div className="space-y-2.5 max-h-[450px] overflow-y-auto pr-1">
+            <div className="space-y-2 max-h-[450px] overflow-y-auto pr-1">
               {currentSession.files?.map((file, idx) => (
                 <div 
                   key={file.id || idx}
-                  className="flex items-center justify-between p-3.5 rounded-xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-750 transition"
+                  className="flex items-center justify-between p-3 rounded-xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 hover:border-slate-300 transition"
                 >
                   <div className="flex items-center gap-3 min-w-0">
                     <div className="p-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm">
                       {renderFileIcon(file.name, file.mimeType)}
                     </div>
                     <div className="min-w-0">
-                      <p className="text-sm font-semibold text-slate-900 dark:text-white truncate max-w-sm sm:max-w-md" title={file.name}>
+                      <p className="text-xs font-semibold text-slate-900 dark:text-white truncate max-w-sm sm:max-w-md" title={file.name}>
                         {file.name}
                       </p>
-                      <p className="text-xs text-slate-500 dark:text-slate-400 font-mono mt-0.5">
+                      <p className="text-[11px] text-slate-500 dark:text-slate-400 font-mono mt-0.5">
                         {formatBytes(file.size)}
                       </p>
                     </div>
@@ -704,7 +694,7 @@ export default function SenderView({
                     <a
                       href={`${baseUrl}/api/download/${currentSession.code}/${file.id}`}
                       download={file.name}
-                      className="p-2 text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 rounded-lg transition"
+                      className="p-1.5 text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 rounded-lg transition"
                       title="Download file"
                     >
                       Download
@@ -719,74 +709,69 @@ export default function SenderView({
         /* ─────────────────────────────────────────────────────────────
             MODE B: CREATE A NEW GROUP FORM
            ───────────────────────────────────────────────────────────── */
-        <div className="space-y-6">
-          <div className="text-center space-y-2">
-            <h1 className="text-3xl sm:text-4xl font-extrabold text-slate-900 dark:text-white tracking-tight">
-              Create New Group Session
+        <div className="space-y-5">
+          <div className="text-center space-y-1.5">
+            <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">
+              Create Share Group
             </h1>
-            <p className="text-sm text-slate-600 dark:text-slate-400 font-normal leading-relaxed">
-              {sessions.length > 0 
-                ? `You have ${sessions.length} other active session(s) running. Creating a new group keeps all previous groups active.` 
-                : 'Configure session details, generate a 4-digit PIN, and choose files to share.'}
+            <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 font-normal">
+              Set group details, 4-digit PIN, and choose files to share.
             </p>
           </div>
 
-          <form onSubmit={handleStartSharing} className="space-y-6">
+          <form onSubmit={handleStartSharing} className="space-y-5">
             {/* Session Inputs Card */}
-            <div className="rounded-3xl p-6 sm:p-8 border border-slate-200/90 dark:border-slate-800 space-y-6 bg-white dark:bg-slate-900/70 shadow-sm">
+            <div className="rounded-3xl p-6 border border-slate-200/90 dark:border-slate-800 space-y-5 bg-white dark:bg-slate-900/70 shadow-sm">
               <h3 className="text-xs font-bold uppercase tracking-wider text-indigo-600 dark:text-indigo-400">
-                1. Sender & Group Information
+                1. Session Details
               </h3>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {/* Input 1: Sender Name */}
-                <div className="space-y-2">
+                <div className="space-y-1.5">
                   <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300">
                     Your Name <span className="text-indigo-600 dark:text-indigo-400">*</span>
                   </label>
                   <input
                     type="text"
                     required
-                    placeholder="e.g. Alex, MacBook Pro"
+                    placeholder="e.g. Alex"
                     value={senderName}
                     onChange={(e) => setSenderName(e.target.value)}
-                    className="w-full px-4 py-3 rounded-xl bg-slate-50 dark:bg-slate-950/80 border border-slate-300 dark:border-slate-700/80 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 text-sm focus:outline-none focus:border-indigo-600 focus:ring-1 focus:ring-indigo-600 transition font-normal"
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-950/80 border border-slate-300 dark:border-slate-700/80 text-slate-900 dark:text-white placeholder-slate-400 text-sm focus:outline-none focus:border-indigo-600 transition font-normal"
                   />
                 </div>
 
                 {/* Input 2: Group Name */}
-                <div className="space-y-2">
+                <div className="space-y-1.5">
                   <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300">
                     Group Name <span className="text-indigo-600 dark:text-indigo-400">*</span>
                   </label>
                   <input
                     type="text"
                     required
-                    placeholder="e.g. Project Specs, Design Review"
+                    placeholder="e.g. Project Files"
                     value={groupName}
                     onChange={(e) => setGroupName(e.target.value)}
-                    className="w-full px-4 py-3 rounded-xl bg-slate-50 dark:bg-slate-950/80 border border-slate-300 dark:border-slate-700/80 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 text-sm focus:outline-none focus:border-indigo-600 focus:ring-1 focus:ring-indigo-600 transition font-normal"
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-950/80 border border-slate-300 dark:border-slate-700/80 text-slate-900 dark:text-white placeholder-slate-400 text-sm focus:outline-none focus:border-indigo-600 transition font-normal"
                   />
                 </div>
               </div>
 
               {/* 4-Digit Code Configuration */}
               <div className="pt-2 border-t border-slate-100 dark:border-slate-800/80">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3">
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300">
-                      4-Digit Security Code <span className="text-indigo-600 dark:text-indigo-400">*</span>
-                    </label>
-                    <p className="text-xs text-slate-500 dark:text-slate-400 font-normal">The receiver must enter this code to access your files</p>
-                  </div>
+                <div className="flex items-center justify-between gap-3 mb-2.5">
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300">
+                    4-Digit PIN <span className="text-indigo-600 dark:text-indigo-400">*</span>
+                  </label>
 
                   <button
                     type="button"
                     onClick={handleRegenerateCode}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-50 dark:bg-slate-950 hover:bg-slate-100 dark:hover:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 text-xs font-semibold transition self-start sm:self-auto"
+                    className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-slate-50 dark:bg-slate-950 hover:bg-slate-100 dark:hover:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 text-xs font-semibold transition"
                   >
                     <Dices className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
-                    Randomize PIN
+                    Randomize
                   </button>
                 </div>
 
@@ -802,20 +787,17 @@ export default function SenderView({
                       const val = e.target.value.replace(/\D/g, '').slice(0, 4);
                       setCode(val);
                     }}
-                    className="w-44 px-4 py-3 text-center tracking-widest font-mono text-2xl font-bold rounded-xl bg-slate-50 dark:bg-slate-950 border border-indigo-300 dark:border-indigo-500/50 text-slate-900 dark:text-white focus:outline-none focus:border-indigo-600 transition shadow-sm"
+                    className="w-36 px-3 py-2 text-center tracking-widest font-mono text-xl font-bold rounded-xl bg-slate-50 dark:bg-slate-950 border border-indigo-300 dark:border-indigo-500/50 text-slate-900 dark:text-white focus:outline-none focus:border-indigo-600 transition shadow-sm"
                   />
-                  <span className="text-xs text-slate-500 dark:text-slate-400 font-normal">
-                    4 numeric digits (e.g. {code || '4829'})
-                  </span>
                 </div>
               </div>
             </div>
 
             {/* File Dropzone Card */}
-            <div className="rounded-3xl p-6 sm:p-8 border border-slate-200/90 dark:border-slate-800 space-y-6 bg-white dark:bg-slate-900/70 shadow-sm">
+            <div className="rounded-3xl p-6 border border-slate-200/90 dark:border-slate-800 space-y-5 bg-white dark:bg-slate-900/70 shadow-sm">
               <div className="flex items-center justify-between">
                 <h3 className="text-xs font-bold uppercase tracking-wider text-indigo-600 dark:text-indigo-400">
-                  2. Select Files for this Group
+                  2. Files
                 </h3>
                 {selectedFiles.length > 0 && (
                   <button
@@ -823,7 +805,7 @@ export default function SenderView({
                     onClick={clearFiles}
                     className="text-xs font-semibold text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white transition"
                   >
-                    Clear all ({selectedFiles.length})
+                    Clear ({selectedFiles.length})
                   </button>
                 )}
               </div>
@@ -834,10 +816,10 @@ export default function SenderView({
                 onDragLeave={handleDragLeave}
                 onDrop={handleDrop}
                 onClick={() => fileInputRef.current?.click()}
-                className={`border-2 border-dashed rounded-2xl p-8 text-center cursor-pointer transition-all duration-200 flex flex-col items-center justify-center gap-3 ${
+                className={`border-2 border-dashed rounded-2xl p-6 text-center cursor-pointer transition-all duration-200 flex flex-col items-center justify-center gap-2.5 ${
                   isDragging
                     ? 'border-indigo-600 bg-indigo-50/60 dark:bg-indigo-500/10 scale-[1.01]'
-                    : 'border-slate-300 dark:border-slate-800 hover:border-indigo-400 dark:hover:border-indigo-500/50 bg-slate-50/50 dark:bg-slate-950/40 hover:bg-slate-50 dark:hover:bg-slate-950/70'
+                    : 'border-slate-300 dark:border-slate-800 hover:border-indigo-400 bg-slate-50/50 dark:bg-slate-950/40'
                 }`}
               >
                 <input
@@ -848,43 +830,38 @@ export default function SenderView({
                   onChange={handleFileSelect}
                 />
 
-                <div className="w-14 h-14 rounded-2xl bg-indigo-50 dark:bg-indigo-500/10 border border-indigo-100 dark:border-indigo-500/20 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shadow-sm">
-                  <UploadCloud className="w-7 h-7 text-indigo-600 dark:text-indigo-400" />
+                <div className="w-12 h-12 rounded-2xl bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shadow-sm">
+                  <UploadCloud className="w-6 h-6" />
                 </div>
 
-                <div>
-                  <p className="text-sm font-semibold text-slate-900 dark:text-white">
-                    Drag and drop files here, or <span className="text-indigo-600 dark:text-indigo-400 underline font-medium">browse</span>
-                  </p>
-                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 font-normal">
-                    Supports any file format (photos, videos, documents, zip)
-                  </p>
-                </div>
+                <p className="text-xs sm:text-sm font-semibold text-slate-900 dark:text-white">
+                  Drag files here, or <span className="text-indigo-600 dark:text-indigo-400 underline font-medium">browse</span>
+                </p>
               </div>
 
               {/* Selected Files Preview List */}
               {selectedFiles.length > 0 && (
-                <div className="space-y-4 pt-2">
+                <div className="space-y-3 pt-1">
                   <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 font-normal">
                     <span>{selectedFiles.length} file(s) selected</span>
-                    <span className="font-mono font-medium text-slate-800 dark:text-slate-200">Total: {formatBytes(totalSizeBytes)}</span>
+                    <span className="font-mono font-medium text-slate-800 dark:text-slate-200">{formatBytes(totalSizeBytes)}</span>
                   </div>
 
                   <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
                     {selectedFiles.map((file, idx) => (
                       <div
                         key={`${file.name}_${idx}`}
-                        className="flex items-center justify-between p-3 rounded-xl bg-slate-50 dark:bg-slate-950/70 border border-slate-200 dark:border-slate-800"
+                        className="flex items-center justify-between p-2.5 rounded-xl bg-slate-50 dark:bg-slate-950/70 border border-slate-200 dark:border-slate-800"
                       >
                         <div className="flex items-center gap-3 min-w-0">
-                          <div className="p-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm">
+                          <div className="p-1.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm">
                             {renderFileIcon(file.name, file.type)}
                           </div>
                           <div className="min-w-0">
                             <p className="text-xs font-semibold text-slate-900 dark:text-white truncate max-w-xs sm:max-w-md" title={file.name}>
                               {file.name}
                             </p>
-                            <p className="text-[11px] text-slate-500 dark:text-slate-400 font-mono mt-0.5">
+                            <p className="text-[11px] text-slate-500 dark:text-slate-400 font-mono">
                               {formatBytes(file.size)}
                             </p>
                           </div>
@@ -896,7 +873,7 @@ export default function SenderView({
                             e.stopPropagation();
                             removeFile(idx);
                           }}
-                          className="p-1.5 text-slate-400 hover:text-rose-600 dark:hover:text-white rounded-lg hover:bg-slate-200 dark:hover:bg-slate-900 transition"
+                          className="p-1.5 text-slate-400 hover:text-rose-600 rounded-lg transition"
                           title="Remove file"
                         >
                           <Trash2 className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
@@ -912,10 +889,10 @@ export default function SenderView({
             {isUploading && (
               <div className="rounded-2xl p-4 border border-slate-200 dark:border-slate-800 space-y-2 bg-white dark:bg-slate-900/70 shadow-sm">
                 <div className="flex justify-between text-xs text-slate-700 dark:text-slate-300 font-medium">
-                  <span>Uploading & preparing files for LAN transfer...</span>
+                  <span>Uploading files...</span>
                   <span>{uploadProgress}%</span>
                 </div>
-                <div className="w-full bg-slate-100 dark:bg-slate-950 h-2.5 rounded-full overflow-hidden">
+                <div className="w-full bg-slate-100 dark:bg-slate-950 h-2 rounded-full overflow-hidden">
                   <div
                     className="bg-indigo-600 h-full rounded-full transition-all duration-200"
                     style={{ width: `${uploadProgress}%` }}
@@ -937,8 +914,8 @@ export default function SenderView({
                 </>
               ) : (
                 <>
-                  <UploadCloud className="w-5 h-5 text-white" />
-                  <span>Create Share Group ({selectedFiles.length} files)</span>
+                  <UploadCloud className="w-4 h-4 text-white" />
+                  <span>Share {selectedFiles.length} File(s)</span>
                 </>
               )}
             </button>

@@ -406,18 +406,18 @@ export default function ReceiverView({
         </div>
 
         {/* Session Info Header */}
-        <div className="rounded-3xl p-6 sm:p-8 border border-slate-200 dark:border-slate-800 relative overflow-hidden bg-white dark:bg-slate-900/70 shadow-sm">
-          <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
-            <div className="space-y-2">
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/20 text-emerald-700 dark:text-emerald-400 text-xs font-semibold">
+        <div className="rounded-3xl p-6 border border-slate-200 dark:border-slate-800 relative overflow-hidden bg-white dark:bg-slate-900/70 shadow-sm">
+          <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-5">
+            <div className="space-y-1.5">
+              <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/20 text-emerald-700 dark:text-emerald-400 text-xs font-semibold">
                 <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                <span>Connected to Sender • Live Transfer</span>
+                <span>Connected</span>
               </div>
-              <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">
+              <h2 className="text-xl sm:text-2xl font-extrabold text-slate-900 dark:text-white tracking-tight">
                 {sessionData.groupName}
               </h2>
-              <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 font-normal leading-relaxed">
-                Shared by <span className="font-semibold text-slate-900 dark:text-slate-200">{sessionData.senderName}</span> • <span className="text-emerald-600 dark:text-emerald-400 font-semibold">Connected</span>
+              <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 font-normal">
+                Shared by <span className="font-semibold text-slate-900 dark:text-slate-200">{sessionData.senderName}</span>
               </p>
             </div>
 
@@ -426,50 +426,46 @@ export default function ReceiverView({
               <button
                 disabled={isDownloadingAll || files.length === 0}
                 onClick={handleDownloadAll}
-                className="flex items-center justify-center gap-2.5 px-6 py-3.5 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-sm shadow-md shadow-indigo-600/20 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex items-center justify-center gap-2 px-5 py-3 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs shadow-md shadow-indigo-600/20 transition disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isDownloadingAll ? (
                   <>
                     <RefreshCw className="w-4 h-4 animate-spin text-white" />
-                    <span>Zipping & Downloading...</span>
+                    <span>Downloading...</span>
                   </>
                 ) : (
                   <>
-                    <FolderDown className="w-5 h-5 text-white" />
-                    <span>Download All ({files.length} files • {formatBytes(totalBytes)})</span>
+                    <FolderDown className="w-4 h-4 text-white" />
+                    <span>Download All ({files.length})</span>
                   </>
                 )}
               </button>
             </div>
           </div>
 
-          <div className="mt-6 pt-5 border-t border-slate-100 dark:border-slate-800/80 flex flex-wrap items-center justify-between gap-3 text-xs text-slate-500 dark:text-slate-400 font-normal">
-            <div className="flex items-center gap-2">
+          <div className="mt-5 pt-4 border-t border-slate-100 dark:border-slate-800/80 flex flex-wrap items-center justify-between gap-3 text-xs text-slate-500 dark:text-slate-400 font-normal">
+            <div className="flex items-center gap-1.5">
               <ShieldCheck className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
-              <span>Safe Transfer: Files are not auto-downloaded. Preview first, or download individually or all at once.</span>
+              <span>Ready for download</span>
             </div>
             <span className="font-mono text-slate-700 dark:text-slate-300">
-              {files.length} items • {formatBytes(totalBytes)}
+              {files.length} file(s) • {formatBytes(totalBytes)}
             </span>
           </div>
         </div>
 
         {/* Files Explorer / List */}
-        <div className="rounded-3xl p-6 sm:p-8 border border-slate-200 dark:border-slate-800 space-y-4 bg-white dark:bg-slate-900/70 shadow-sm">
+        <div className="rounded-3xl p-6 border border-slate-200 dark:border-slate-800 space-y-4 bg-white dark:bg-slate-900/70 shadow-sm">
           <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
             <h3 className="text-xs font-bold uppercase tracking-wider text-indigo-600 dark:text-indigo-400">
-              Available Files ({files.length})
+              Files ({files.length})
             </h3>
-            <span className="text-xs text-slate-500 dark:text-slate-400 font-normal">
-              Click "Download" on any file or "Preview" to inspect
-            </span>
           </div>
 
           {files.length === 0 ? (
-            <div className="text-center py-12 text-slate-500 space-y-2">
-              <File className="w-12 h-12 text-indigo-600/30 dark:text-indigo-400/40 mx-auto" />
-              <p className="text-sm font-semibold text-slate-800 dark:text-white">No files uploaded yet in this session</p>
-              <p className="text-xs text-slate-500 dark:text-slate-400 font-normal">Wait for the sender to drop files into the session.</p>
+            <div className="text-center py-10 text-slate-500 space-y-1.5">
+              <File className="w-10 h-10 text-indigo-600/30 dark:text-indigo-400/40 mx-auto" />
+              <p className="text-xs font-semibold text-slate-800 dark:text-white">No files uploaded yet</p>
             </div>
           ) : (
             <div className="space-y-2.5">
@@ -585,8 +581,7 @@ export default function ReceiverView({
           <div className="flex items-center justify-between p-3.5 rounded-2xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-500/30 text-amber-700 dark:text-amber-400 text-xs font-semibold animate-fadeIn">
             <div className="flex items-center gap-2">
               <RefreshCw className="w-3.5 h-3.5 animate-spin text-amber-600" />
-              <span className="font-bold">Status: Verifying PIN...</span>
-              <span className="font-normal text-amber-600 dark:text-amber-300">• Checking sender on local network</span>
+              <span className="font-bold">Verifying PIN...</span>
             </div>
             <span className="px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-500/20 text-amber-800 dark:text-amber-300 text-[10px] font-bold">
               CHECKING
@@ -596,48 +591,48 @@ export default function ReceiverView({
           <div className="flex items-center justify-between p-3.5 rounded-2xl bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-500/30 text-rose-700 dark:text-rose-400 text-xs font-semibold animate-fadeIn">
             <div className="flex items-center gap-2">
               <span className="w-2.5 h-2.5 rounded-full bg-rose-500"></span>
-              <span className="font-bold">Status: Not Connected</span>
+              <span className="font-bold">Not Connected</span>
               <span className="font-normal text-rose-600 dark:text-rose-300">• {errorMessage}</span>
             </div>
             <span className="px-2 py-0.5 rounded-full bg-rose-100 dark:bg-rose-500/20 text-rose-800 dark:text-rose-300 text-[10px] font-bold">
-              NOT CONNECTED
+              ERROR
             </span>
           </div>
         ) : !receiverName.trim() ? (
           <div className="flex items-center justify-between p-3.5 rounded-2xl bg-rose-50/70 dark:bg-rose-950/20 border border-rose-200 dark:border-rose-500/20 text-rose-700 dark:text-rose-400 text-xs font-semibold">
             <div className="flex items-center gap-2">
               <span className="w-2.5 h-2.5 rounded-full bg-rose-500"></span>
-              <span className="font-bold">Status: Not Connected</span>
-              <span className="font-normal text-slate-500 dark:text-slate-400">• Your name is required before connecting</span>
+              <span className="font-bold">Not Connected</span>
+              <span className="font-normal text-slate-500 dark:text-slate-400">• Name required</span>
             </div>
             <span className="px-2 py-0.5 rounded-full bg-rose-100 dark:bg-rose-500/20 text-rose-800 dark:text-rose-300 text-[10px] font-bold">
-              NAME REQUIRED
+              NAME
             </span>
           </div>
         ) : (
           <div className="flex items-center justify-between p-3.5 rounded-2xl bg-rose-50/70 dark:bg-rose-950/20 border border-rose-200 dark:border-rose-500/20 text-rose-700 dark:text-rose-400 text-xs font-semibold">
             <div className="flex items-center gap-2">
               <span className="w-2.5 h-2.5 rounded-full bg-rose-500"></span>
-              <span className="font-bold">Status: Not Connected</span>
-              <span className="font-normal text-slate-500 dark:text-slate-400">• Enter correct 4-digit PIN to connect as {receiverName}</span>
+              <span className="font-bold">Not Connected</span>
+              <span className="font-normal text-slate-500 dark:text-slate-400">• Enter 4-digit PIN</span>
             </div>
             <span className="px-2 py-0.5 rounded-full bg-rose-100 dark:bg-rose-500/20 text-rose-800 dark:text-rose-300 text-[10px] font-bold">
-              ENTER PIN
+              PIN
             </span>
           </div>
         )}
 
         {/* Scanned via QR Indicator */}
         {initialCode && (
-          <div className="flex items-center justify-between p-3.5 rounded-2xl bg-indigo-50 dark:bg-indigo-500/10 border border-indigo-200 dark:border-indigo-500/20 text-xs animate-fadeIn">
-            <div className="flex items-center gap-2.5">
+          <div className="flex items-center justify-between p-3 rounded-2xl bg-indigo-50 dark:bg-indigo-500/10 border border-indigo-200 dark:border-indigo-500/20 text-xs animate-fadeIn">
+            <div className="flex items-center gap-2">
               <QrCode className="w-4 h-4 text-indigo-600 dark:text-indigo-400 animate-pulse" />
               <span>
-                QR Scanned for <strong className="text-indigo-900 dark:text-white">{groupParam || 'Group'}</strong> (PIN: <strong className="font-mono text-indigo-600 dark:text-indigo-400">{initialCode}</strong>)
+                QR: <strong className="text-indigo-900 dark:text-white">{groupParam || 'Group'}</strong> (PIN: <strong className="font-mono text-indigo-600 dark:text-indigo-400">{initialCode}</strong>)
               </span>
             </div>
-            <span className="text-[10px] font-bold text-emerald-700 dark:text-emerald-400 bg-emerald-100 dark:bg-emerald-500/20 px-2.5 py-0.5 rounded-full uppercase tracking-wider">
-              PIN Auto-Filled
+            <span className="text-[10px] font-bold text-emerald-700 dark:text-emerald-400 bg-emerald-100 dark:bg-emerald-500/20 px-2 py-0.5 rounded-full uppercase">
+              Auto-Filled
             </span>
           </div>
         )}
@@ -647,7 +642,7 @@ export default function ReceiverView({
           <div className="flex items-center justify-between p-3 rounded-2xl bg-indigo-50/80 dark:bg-indigo-500/10 border border-indigo-200 dark:border-indigo-500/20 text-xs animate-fadeIn">
             <div className="flex items-center gap-2">
               <Lock className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
-              <span>Joining Group: <strong className="text-indigo-900 dark:text-white font-bold">{targetSession.groupName}</strong></span>
+              <span>Group: <strong className="text-indigo-900 dark:text-white font-bold">{targetSession.groupName}</strong></span>
               {targetSession.senderName && (
                 <span className="text-slate-500 dark:text-slate-400 font-normal">• by {targetSession.senderName}</span>
               )}
@@ -662,7 +657,7 @@ export default function ReceiverView({
           </div>
         )}
 
-        {/* STEP 1: Receiver Name (Explicitly Required Before Connecting) */}
+        {/* Receiver Name */}
         <div className="p-4 rounded-2xl bg-slate-50/90 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 space-y-2 text-left">
           <div className="flex items-center justify-between">
             <label className="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
@@ -676,7 +671,7 @@ export default function ReceiverView({
               </span>
             ) : (
               <span className="text-[10px] font-bold text-rose-600 dark:text-rose-400 bg-rose-100 dark:bg-rose-500/20 px-2 py-0.5 rounded-full uppercase tracking-wider">
-                Required to Connect
+                Required
               </span>
             )}
           </div>
@@ -684,7 +679,7 @@ export default function ReceiverView({
           <input
             ref={nameInputRef}
             type="text"
-            placeholder="Enter your name (e.g. Sarah, David)"
+            placeholder="Enter your name"
             value={receiverName}
             onChange={(e) => {
               setReceiverName(e.target.value);
@@ -707,15 +702,12 @@ export default function ReceiverView({
                 : 'border-slate-300 dark:border-slate-800 text-slate-900 dark:text-white focus:border-indigo-600'
             }`}
           />
-          <p className="text-[11px] text-slate-500 dark:text-slate-400 font-normal">
-            Required: The sender will see this name when you connect and download files.
-          </p>
         </div>
 
-        {/* STEP 2: 4-Digit PIN Code */}
-        <div className="space-y-4">
+        {/* 4-Digit PIN Code */}
+        <div className="space-y-3">
           <label className="block text-center text-xs font-bold uppercase tracking-wider text-indigo-600 dark:text-indigo-400">
-            Enter 4-Digit PIN Code {targetSession ? `for "${targetSession.groupName}"` : ''}
+            Enter 4-Digit PIN
           </label>
 
           {/* 4 Large Digit Input Boxes */}
@@ -757,45 +749,37 @@ export default function ReceiverView({
           {isConnecting ? (
             <>
               <RefreshCw className="w-4 h-4 animate-spin text-white" />
-              <span>Connecting & Verifying PIN...</span>
+              <span>Connecting...</span>
             </>
           ) : !receiverName.trim() ? (
             <>
               <User className="w-4 h-4 text-white" />
-              <span>Enter Your Name to Connect & Download</span>
+              <span>Enter Your Name</span>
             </>
           ) : getFullPin().length !== 4 ? (
             <>
               <Lock className="w-4 h-4 text-white" />
-              <span>Enter 4-Digit PIN Code</span>
+              <span>Enter 4-Digit PIN</span>
             </>
           ) : (
             <>
               <DownloadCloud className="w-4 h-4 text-white" />
-              <span>Connect & Download Files</span>
+              <span>Connect & Download</span>
             </>
           )}
         </button>
-
-        <div className="pt-2 text-center text-xs text-slate-500 dark:text-slate-400 flex items-center justify-center gap-1.5 font-normal">
-          <Wifi className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
-          <span>Local network peer-to-peer connection</span>
-        </div>
       </div>
 
-      {/* USER REQUESTED: Active Session Cards (shows active session name, but NOT the PIN) */}
+      {/* Active Session Cards */}
       {allActiveSessions.length > 0 && !sessionData && (
-        <div className="space-y-4 pt-2">
+        <div className="space-y-3 pt-2">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Layers className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
               <h3 className="text-xs font-bold uppercase tracking-wider text-slate-800 dark:text-slate-200">
-                Active Sessions on Local Network ({allActiveSessions.length})
+                Active Sessions ({allActiveSessions.length})
               </h3>
             </div>
-            <span className="text-[11px] text-slate-500 dark:text-slate-400 font-normal">
-              PIN is private to sender • Select a group to enter PIN
-            </span>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">

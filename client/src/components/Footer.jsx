@@ -6,93 +6,93 @@ export default function Footer({ networkInfo, onOpenQr }) {
   return (
     <footer className="border-t border-slate-200 dark:border-slate-800/80 bg-white dark:bg-slate-950/90 text-slate-600 dark:text-slate-400 text-xs transition-colors duration-200">
       {/* Top Feature Bar */}
-      <div className="max-w-6xl mx-auto px-4 sm:px-8 py-8 border-b border-slate-100 dark:border-slate-800/60">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          <div className="flex items-start gap-3">
-            <div className="p-2 rounded-xl bg-indigo-50 dark:bg-indigo-500/10 border border-indigo-100 dark:border-indigo-500/20 text-indigo-600 dark:text-indigo-400 flex-shrink-0">
-              <Zap className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+      <div className="max-w-6xl mx-auto px-4 sm:px-8 py-6 border-b border-slate-100 dark:border-slate-800/60">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="flex items-start gap-2.5">
+            <div className="p-2 rounded-xl bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 flex-shrink-0">
+              <Zap className="w-4 h-4" />
             </div>
             <div>
-              <h4 className="text-xs font-semibold text-slate-900 dark:text-white">Full Gigabit LAN Speed</h4>
-              <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 leading-relaxed">Direct Wi-Fi / LAN transfer with zero cloud limits or bottlenecks.</p>
+              <h4 className="text-xs font-semibold text-slate-900 dark:text-white">Gigabit Speed</h4>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">Direct Wi-Fi / LAN transfer.</p>
             </div>
           </div>
 
-          <div className="flex items-start gap-3">
-            <div className="p-2 rounded-xl bg-indigo-50 dark:bg-indigo-500/10 border border-indigo-100 dark:border-indigo-500/20 text-indigo-600 dark:text-indigo-400 flex-shrink-0">
-              <Lock className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+          <div className="flex items-start gap-2.5">
+            <div className="p-2 rounded-xl bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 flex-shrink-0">
+              <Lock className="w-4 h-4" />
             </div>
             <div>
-              <h4 className="text-xs font-semibold text-slate-900 dark:text-white">4-Digit PIN Security</h4>
-              <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 leading-relaxed">Only devices entering the exact 4-digit session code can access files.</p>
+              <h4 className="text-xs font-semibold text-slate-900 dark:text-white">PIN Protected</h4>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">Secured with 4-digit code.</p>
             </div>
           </div>
 
-          <div className="flex items-start gap-3">
-            <div className="p-2 rounded-xl bg-indigo-50 dark:bg-indigo-500/10 border border-indigo-100 dark:border-indigo-500/20 text-indigo-600 dark:text-indigo-400 flex-shrink-0">
-              <ShieldCheck className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+          <div className="flex items-start gap-2.5">
+            <div className="p-2 rounded-xl bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 flex-shrink-0">
+              <ShieldCheck className="w-4 h-4" />
             </div>
             <div>
-              <h4 className="text-xs font-semibold text-slate-900 dark:text-white">No Auto-Download</h4>
-              <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 leading-relaxed">Preview first, then download all as ZIP or select individual files.</p>
+              <h4 className="text-xs font-semibold text-slate-900 dark:text-white">Manual Download</h4>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">Preview first, then download.</p>
             </div>
           </div>
 
-          <div className="flex items-start gap-3">
-            <div className="p-2 rounded-xl bg-indigo-50 dark:bg-indigo-500/10 border border-indigo-100 dark:border-indigo-500/20 text-indigo-600 dark:text-indigo-400 flex-shrink-0">
-              <HardDrive className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+          <div className="flex items-start gap-2.5">
+            <div className="p-2 rounded-xl bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 flex-shrink-0">
+              <HardDrive className="w-4 h-4" />
             </div>
             <div>
-              <h4 className="text-xs font-semibold text-slate-900 dark:text-white">100% Local Privacy</h4>
-              <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 leading-relaxed">Files stay in your local network and never leave your router.</p>
+              <h4 className="text-xs font-semibold text-slate-900 dark:text-white">Private Transfer</h4>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">Stays on your local network.</p>
             </div>
           </div>
         </div>
       </div>
 
       {/* Main Footer Links & Status */}
-      <div className="max-w-6xl mx-auto px-4 sm:px-8 py-8">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 items-start">
+      <div className="max-w-6xl mx-auto px-4 sm:px-8 py-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-start">
           {/* Brand Info */}
-          <div className="space-y-3">
-            <div className="flex items-center gap-2.5">
-              <div className="w-7 h-7 rounded-lg bg-indigo-50 dark:bg-slate-900 border border-indigo-200 dark:border-indigo-500/30 flex items-center justify-center text-indigo-600 dark:text-indigo-400">
-                <UploadCloud className="w-4 h-4 text-indigo-600 dark:text-indigo-400 -rotate-45" />
+          <div className="space-y-2.5">
+            <div className="flex items-center gap-2">
+              <div className="w-6 h-6 rounded-lg bg-indigo-50 dark:bg-slate-900 border border-indigo-200 dark:border-indigo-500/30 flex items-center justify-center text-indigo-600 dark:text-indigo-400">
+                <UploadCloud className="w-3.5 h-3.5 -rotate-45" />
               </div>
-              <span className="font-bold text-sm tracking-tight text-slate-900 dark:text-white">
+              <span className="font-bold text-sm text-slate-900 dark:text-white">
                 AirLink LAN
               </span>
-              <span className="text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-500/20 font-mono">
+              <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 font-mono">
                 v1.3.0
               </span>
             </div>
             <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed max-w-sm">
-              Professional local file sharing web application designed for fast, seamless peer-to-peer data transfers between any devices on the same Wi-Fi or Ethernet.
+              Fast, private local file sharing between devices on the same network.
             </p>
           </div>
 
           {/* Quick Navigation Links */}
-          <div className="space-y-3">
+          <div className="space-y-2.5">
             <h5 className="text-xs font-bold uppercase tracking-wider text-indigo-600 dark:text-indigo-400">
-              Quick Navigation
+              Navigation
             </h5>
-            <ul className="space-y-2 text-xs">
+            <ul className="space-y-1.5 text-xs">
               <li>
                 <Link to="/" className="text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition flex items-center gap-2">
                   <span className="w-1.5 h-1.5 rounded-full bg-indigo-600 dark:bg-indigo-400"></span>
-                  Home Landing Page
+                  Home
                 </Link>
               </li>
               <li>
                 <Link to="/send" className="text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition flex items-center gap-2">
                   <span className="w-1.5 h-1.5 rounded-full bg-indigo-600 dark:bg-indigo-400"></span>
-                  Share Files (Sender Mode)
+                  Share Files
                 </Link>
               </li>
               <li>
                 <Link to="/receive" className="text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition flex items-center gap-2">
                   <span className="w-1.5 h-1.5 rounded-full bg-indigo-600 dark:bg-indigo-400"></span>
-                  Receive Files (Receiver Mode)
+                  Receive Files
                 </Link>
               </li>
               <li>
@@ -101,7 +101,7 @@ export default function Footer({ networkInfo, onOpenQr }) {
                   className="text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition flex items-center gap-2 text-left"
                 >
                   <span className="w-1.5 h-1.5 rounded-full bg-indigo-600 dark:bg-indigo-400"></span>
-                  Local Network QR Code
+                  QR Code
                 </button>
               </li>
             </ul>
