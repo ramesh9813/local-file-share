@@ -8,7 +8,6 @@ import {
 } from 'lucide-react';
 import { formatBytes, getFileCategory, isPreviewable } from '../utils/fileHelpers';
 import { safeFetchJson, getApiBaseUrl } from '../utils/apiClient';
-import { useSessions } from '../context/SessionContext';
 import FilePreviewModal from './FilePreviewModal';
 import confetti from 'canvas-confetti';
 
@@ -24,15 +23,6 @@ export default function ReceiverView({
   const [pinDigits, setPinDigits] = useState(['', '', '', '']);
   const [receiverName, setReceiverName] = useState(() => localStorage.getItem('localshare_recv_name') || '');
   
-  // Active Sessions from Context
-  const { allActiveSessions = [], refreshActiveSessions } = useSessions();
-
-  useEffect(() => {
-    if (typeof refreshActiveSessions === 'function') {
-      refreshActiveSessions();
-    }
-  }, [refreshActiveSessions]);
-
   // Connection state
   const [isConnecting, setIsConnecting] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
@@ -329,15 +319,15 @@ export default function ReceiverView({
         <div className="rounded-3xl p-6 sm:p-8 border border-slate-200 dark:border-slate-800 relative overflow-hidden bg-white dark:bg-slate-900/70 shadow-sm">
           <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
             <div className="space-y-2">
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-50 dark:bg-indigo-500/10 border border-indigo-200 dark:border-indigo-500/20 text-indigo-700 dark:text-indigo-400 text-xs font-semibold">
-                <Wifi className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400 animate-pulse" />
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/20 text-emerald-700 dark:text-emerald-400 text-xs font-semibold">
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
                 <span>Connected to Sender • Live Transfer</span>
               </div>
               <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">
                 {sessionData.groupName}
               </h2>
               <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 font-normal leading-relaxed">
-                Shared by <span className="font-semibold text-slate-900 dark:text-slate-200">{sessionData.senderName}</span> • Session Code: <span className="font-mono font-bold text-indigo-600 dark:text-indigo-300">{sessionData.code}</span>
+                Shared by <span className="font-semibold text-slate-900 dark:text-slate-200">{sessionData.senderName}</span> • <span className="text-emerald-600 dark:text-emerald-400 font-semibold">Connected</span>
               </p>
             </div>
 
@@ -609,69 +599,6 @@ export default function ReceiverView({
           <span>Local network peer-to-peer connection</span>
         </div>
       </div>
-
-      {/* USER REQUESTED: Active Senders List Panel with Connected (Green) or Not Connected (Red) */}
-      {allActiveSessions.length > 0 && (
-        <div className="rounded-3xl p-6 sm:p-7 border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/70 shadow-sm space-y-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Users className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
-              <h3 className="text-xs font-bold uppercase tracking-wider text-indigo-600 dark:text-indigo-400">
-                Active Senders on Network ({allActiveSessions.length})
-              </h3>
-            </div>
-            <span className="text-[11px] text-slate-500 dark:text-slate-400 font-normal">
-              Click to auto-fill PIN & connect
-            </span>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {allActiveSessions.map((s) => (
-              <div
-                key={s.code}
-                onClick={() => {
-                  const digits = s.code.split('');
-                  setPinDigits(digits);
-                  setErrorMessage('');
-                  handleConnect(s.code);
-                }}
-                className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-950/70 border border-slate-200 dark:border-slate-800 hover:border-indigo-400 dark:hover:border-indigo-500/50 cursor-pointer transition flex items-center justify-between gap-3 group"
-              >
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-2">
-                    <p className="text-xs font-bold text-slate-900 dark:text-white truncate">
-                      {s.groupName}
-                    </p>
-                    {s.connected ? (
-                      <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 text-[9px] font-bold">
-                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                        Connected
-                      </span>
-                    ) : (
-                      <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-rose-50 dark:bg-rose-500/10 text-rose-700 dark:text-rose-400 text-[9px] font-bold">
-                        <span className="w-1.5 h-1.5 rounded-full bg-rose-500"></span>
-                        Not Connected
-                      </span>
-                    )}
-                  </div>
-                  <p className="text-[11px] text-slate-600 dark:text-slate-300 mt-0.5">
-                    Sender: <span className="font-semibold text-indigo-600 dark:text-indigo-400">{s.senderName}</span>
-                  </p>
-                  <p className="text-[10px] text-slate-400 font-mono mt-0.5">
-                    {s.fileCount || 0} files • PIN: <span className="font-bold text-slate-800 dark:text-slate-200">{s.code}</span>
-                  </p>
-                </div>
-
-                <button
-                  className="px-3 py-1.5 rounded-xl bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 group-hover:bg-indigo-600 group-hover:text-white text-xs font-semibold transition flex-shrink-0"
-                >
-                  Connect
-                </button>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
     </div>
   );
 }
