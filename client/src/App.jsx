@@ -11,6 +11,7 @@ import SenderView from './components/SenderView';
 import ReceiverView from './components/ReceiverView';
 import QrModal from './components/QrModal';
 import { ThemeProvider } from './context/ThemeContext';
+import { SessionProvider } from './context/SessionContext';
 import { getApiBaseUrl, safeFetchJson } from './utils/apiClient';
 
 export default function App() {
@@ -68,12 +69,13 @@ export default function App() {
   return (
     <ThemeProvider>
       <BrowserRouter>
-        <div className="min-h-screen flex flex-col bg-slate-50 text-slate-900 dark:bg-[#080c14] dark:text-slate-100 font-['Plus_Jakarta_Sans',sans-serif] selection:bg-indigo-600 selection:text-white relative transition-colors duration-200">
-          {/* Header with React Router Navigation & Theme Switcher */}
-          <Header 
-            networkInfo={networkInfo} 
-            onOpenQr={() => setIsQrOpen(true)} 
-          />
+        <SessionProvider>
+          <div className="min-h-screen flex flex-col bg-slate-50 text-slate-900 dark:bg-[#080c14] dark:text-slate-100 font-['Plus_Jakarta_Sans',sans-serif] selection:bg-indigo-600 selection:text-white relative transition-colors duration-200">
+            {/* Header with React Router Navigation & Theme Switcher */}
+            <Header 
+              networkInfo={networkInfo} 
+              onOpenQr={() => setIsQrOpen(true)} 
+            />
 
           {/* Main Content Area Routed via React Router */}
           <main className="flex-1 max-w-6xl w-full mx-auto px-4 sm:px-8 py-6">
@@ -139,7 +141,8 @@ export default function App() {
             ))}
           </div>
         </div>
-      </BrowserRouter>
-    </ThemeProvider>
+      </SessionProvider>
+    </BrowserRouter>
+  </ThemeProvider>
   );
 }

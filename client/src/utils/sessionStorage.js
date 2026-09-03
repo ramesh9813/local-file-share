@@ -1,58 +1,97 @@
-const ACTIVE_SESSION_KEY = 'localshare_active_session';
+import { getApiBaseUrl } from './apiClient';
+
+const ACTIVE_SESSIONS_KEY = 'localshare_active_sessions';
+const LEGACY_SINGLE_KEY = 'localshare_active_session';
 const DOWNLOAD_ACTIVITY_KEY_PREFIX = 'localshare_downloads_';
 
-// Save active sharing session to local storage
-export function saveActiveSession(sessionData) {
+// Retrieve all active sharing sessions
+export function getAllSavedSessions() {
   try {
-    if (!sessionData) {
-      localStorage.removeItem(ACTIVE_SESSION_KEY);
-      return;
+    const raw = localStorage.getItem(ACTIVE_SESSIONS_KEY);
+    if (raw) {
+      const list = JSON.parse(raw);
+      if (Array.isArray(list)) return list;
     }
+    // Fallback: migrate legacy single active session if present
+    const legacy = localStorage.getItem(LEGACY_SINGLE_KEY);
+    if (legacy) {
+      const parsed = JSON.parse(legacy);
+      if (parsed && parsed.code) {
+        localStorage.setItem(ACTIVE_SESSIONS_KEY, JSON.stringify([parsed]));
+        localStorage.removeItem(LEGACY_SINGLE_KEY);
+        return [parsed];
+      }
+    }
+    return [];
+  } catch (e) {
+    return [];
+  }
+}
+
+// Save or update an active session in the multi-session list
+export function saveOrUpdateSession(sessionData) {
+  if (!sessionData || !sessionData.code) return;
+  try {
+    const sessions = getAllSavedSessions();
+    const index = sessions.findIndex(s => s.code === sessionData.code);
     const payload = {
       code: sessionData.code,
-      groupName: sessionData.groupName,
-      senderName: sessionData.senderName,
+      groupName: sessionData.groupName || 'Shared Files',
+      senderName: sessionData.senderName || 'Anonymous Sender',
       files: sessionData.files || [],
       createdAt: sessionData.createdAt || new Date().toISOString()
     };
-    localStorage.setItem(ACTIVE_SESSION_KEY, JSON.stringify(payload));
+
+    if (index >= 0) {
+      sessions[index] = { ...sessions[index], ...payload };
+    } else {
+      sessions.unshift(payload);
+    }
+
+    localStorage.setItem(ACTIVE_SESSIONS_KEY, JSON.stringify(sessions));
+    window.dispatchEvent(new Event('sessions_updated'));
   } catch (e) {
     console.warn('Failed to save session to localStorage:', e);
   }
 }
 
-// Retrieve active session from local storage
-export function getSavedActiveSession() {
+// Remove an active session from local storage
+export function removeSavedSession(code) {
+  if (!code) return;
   try {
-    const raw = localStorage.getItem(ACTIVE_SESSION_KEY);
-    if (!raw) return null;
-    return JSON.parse(raw);
-  } catch (e) {
-    return null;
-  }
-}
-
-// Clear active session
-export function clearSavedActiveSession() {
-  try {
-    localStorage.removeItem(ACTIVE_SESSION_KEY);
+    const sessions = getAllSavedSessions().filter(s => s.code !== code);
+    localStorage.setItem(ACTIVE_SESSIONS_KEY, JSON.stringify(sessions));
+    localStorage.removeItem(`${DOWNLOAD_ACTIVITY_KEY_PREFIX}${code}`);
+    window.dispatchEvent(new Event('sessions_updated'));
   } catch (e) {}
 }
 
-// Save download record for a session
+// Close session on the server via DELETE API
+export async function closeSessionOnServer(code) {
+  if (!code) return;
+  try {
+    const baseUrl = getApiBaseUrl();
+    await fetch(`${baseUrl}/api/room/${code}`, {
+      method: 'DELETE'
+    });
+  } catch (e) {
+    console.warn('Failed to close room on server:', e);
+  }
+}
+
+// Save download activity for a specific session code
 export function saveDownloadRecord(code, record) {
   if (!code || !record) return;
   try {
     const key = `${DOWNLOAD_ACTIVITY_KEY_PREFIX}${code}`;
     const raw = localStorage.getItem(key);
     const list = raw ? JSON.parse(raw) : [];
-    // prepend new record
     list.unshift(record);
     localStorage.setItem(key, JSON.stringify(list.slice(0, 50)));
   } catch (e) {}
 }
 
-// Get saved download records for a session
+// Get saved download records for a session code
 export function getSavedDownloads(code) {
   if (!code) return [];
   try {
