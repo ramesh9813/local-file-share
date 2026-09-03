@@ -359,16 +359,6 @@ export default function Header({ networkInfo, onOpenQr }) {
             )}
           </button>
 
-          {/* QR Code Button */}
-          <button
-            onClick={onOpenQr}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-indigo-400 dark:hover:border-indigo-500 text-xs font-semibold text-slate-700 dark:text-slate-200 transition shadow-sm"
-            title="Open QR Code for Mobile Connect"
-          >
-            <QrCode className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
-            <span className="hidden sm:inline">QR Code</span>
-          </button>
-
           {/* Mobile Hamburger Toggle */}
           <button
             onClick={() => setMobileMenuOpen(prev => !prev)}

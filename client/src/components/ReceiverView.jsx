@@ -4,7 +4,8 @@ import {
   DownloadCloud, UploadCloud, Eye, Download, Archive, 
   FileText, Image as ImageIcon, Video, Music, File, 
   ArrowLeft, RefreshCw, AlertCircle, ShieldCheck, 
-  Wifi, FolderDown, Users, CheckCircle2, XCircle, Lock, Layers, User, QrCode 
+  Wifi, FolderDown, Users, CheckCircle2, XCircle, Lock, Layers, User, QrCode,
+  ClipboardPaste 
 } from 'lucide-react';
 import { formatBytes, getFileCategory, isPreviewable } from '../utils/fileHelpers';
 import { safeFetchJson, getApiBaseUrl } from '../utils/apiClient';
@@ -193,6 +194,55 @@ export default function ReceiverView({
     if (e.key === 'Backspace' && !pinDigits[index] && index > 0) {
       inputRefs[index - 1].current?.focus();
     }
+  };
+
+  const applyPastedPin = (rawText) => {
+    const digits = (rawText || '').replace(/\D/g, '').slice(0, 4);
+    if (!digits) {
+      setErrorMessage('No numbers found in clipboard to paste.');
+      return;
+    }
+    const newDigits = ['', '', '', ''];
+    for (let i = 0; i < digits.length; i++) {
+      newDigits[i] = digits[i];
+    }
+    setPinDigits(newDigits);
+    setErrorMessage('');
+
+    if (digits.length === 4) {
+      inputRefs[3]?.current?.focus();
+      const cleanName = (receiverName || '').trim();
+      if (!cleanName) {
+        setErrorMessage('Receiver Name Required: Please enter your name first before connecting.');
+        setTimeout(() => nameInputRef.current?.focus(), 150);
+        return;
+      }
+      handleConnect(digits);
+    } else {
+      inputRefs[digits.length]?.current?.focus();
+    }
+  };
+
+  const handlePastePin = async () => {
+    try {
+      if (navigator.clipboard && navigator.clipboard.readText) {
+        const text = await navigator.clipboard.readText();
+        applyPastedPin(text);
+      } else {
+        const fallback = window.prompt('Paste your 4-digit PIN code:');
+        if (fallback) applyPastedPin(fallback);
+      }
+    } catch (err) {
+      console.warn('Clipboard read error:', err);
+      const fallback = window.prompt('Paste your 4-digit PIN code:');
+      if (fallback) applyPastedPin(fallback);
+    }
+  };
+
+  const handleNativePaste = (e) => {
+    e.preventDefault();
+    const pasteData = e.clipboardData?.getData('text') || '';
+    applyPastedPin(pasteData);
   };
 
   const getFullPin = () => pinDigits.join('');
@@ -710,26 +760,40 @@ export default function ReceiverView({
             Enter 4-Digit PIN
           </label>
 
-          {/* 4 Large Digit Input Boxes */}
-          <div className="flex justify-center items-center gap-3 sm:gap-4">
-            {pinDigits.map((digit, index) => (
-              <input
-                key={index}
-                ref={inputRefs[index]}
-                type="text"
-                inputMode="numeric"
-                pattern="[0-9]*"
-                maxLength={1}
-                value={digit}
-                onChange={(e) => handleDigitChange(index, e.target.value)}
-                onKeyDown={(e) => handleKeyDown(index, e)}
-                className={`w-14 h-16 sm:w-16 sm:h-20 text-center font-mono text-3xl sm:text-4xl font-extrabold rounded-2xl transition-all duration-200 focus:outline-none ${
-                  digit 
-                    ? 'border-2 border-indigo-600 text-indigo-700 dark:text-white bg-indigo-50/50 dark:bg-indigo-500/10 shadow-md shadow-indigo-500/10 scale-105' 
-                    : 'border border-slate-300 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-slate-700 dark:text-slate-400 focus:border-indigo-600'
-                }`}
-              />
-            ))}
+          {/* 4 Large Digit Input Boxes with Paste Button beside */}
+          <div className="flex justify-center items-center gap-2.5 sm:gap-3.5">
+            <div className="flex items-center gap-2 sm:gap-2.5">
+              {pinDigits.map((digit, index) => (
+                <input
+                  key={index}
+                  ref={inputRefs[index]}
+                  type="text"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  maxLength={1}
+                  value={digit}
+                  onChange={(e) => handleDigitChange(index, e.target.value)}
+                  onKeyDown={(e) => handleKeyDown(index, e)}
+                  onPaste={handleNativePaste}
+                  className={`w-12 h-14 sm:w-14 sm:h-16 text-center font-mono text-2xl sm:text-3xl font-extrabold rounded-2xl transition-all duration-200 focus:outline-none ${
+                    digit 
+                      ? 'border-2 border-indigo-600 text-indigo-700 dark:text-white bg-indigo-50/50 dark:bg-indigo-500/10 shadow-md shadow-indigo-500/10 scale-105' 
+                      : 'border border-slate-300 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-slate-700 dark:text-slate-400 focus:border-indigo-600'
+                  }`}
+                />
+              ))}
+            </div>
+
+            {/* USER REQUESTED: Paste Button right beside the PIN entry point */}
+            <button
+              type="button"
+              onClick={handlePastePin}
+              title="Paste 4-digit PIN from clipboard"
+              className="h-14 sm:h-16 px-3 sm:px-4 rounded-2xl bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-500/10 dark:hover:bg-indigo-500/20 border border-indigo-200 dark:border-indigo-500/30 text-indigo-600 dark:text-indigo-400 transition flex flex-col items-center justify-center gap-1 text-xs font-semibold shadow-sm flex-shrink-0 active:scale-95"
+            >
+              <ClipboardPaste className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
+              <span className="text-[10px] font-bold uppercase tracking-wider">Paste</span>
+            </button>
           </div>
 
           {errorMessage && (
