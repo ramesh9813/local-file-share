@@ -123,29 +123,37 @@ io.on('connection', (socket) => {
     socket.join(code);
     socket.data = { code, role, name };
 
-    console.log(`[Socket] User "${name}" (${role}) joined room: ${code}`);
-
     const room = rooms.get(code);
 
     if (role === 'receiver') {
+      let isFirstJoin = true;
       if (room) {
-        if (!room.receivers.some(r => r.socketId === socket.id)) {
+        const existing = room.receivers.find(r => r.socketId === socket.id);
+        if (!existing) {
           room.receivers.push({
             socketId: socket.id,
             name: name || 'Anonymous Receiver',
             joinedAt: new Date().toISOString()
           });
+        } else {
+          isFirstJoin = false;
         }
       }
-      // Notify sender that receiver connected
-      io.to(code).emit('receiver_joined', {
-        receiverName: name || 'Anonymous Receiver',
-        socketId: socket.id,
-        receiversCount: room ? room.receivers.length : 1
-      });
+
+      // Only notify other clients (sender) in room if this socket genuinely joined for the first time
+      if (isFirstJoin) {
+        console.log(`[Socket] Receiver "${name}" (${socket.id}) joined room: ${code}`);
+        socket.to(code).emit('receiver_joined', {
+          receiverName: name || 'Anonymous Receiver',
+          socketId: socket.id,
+          receiversCount: room ? room.receivers.length : 1
+        });
+      }
+    } else if (role === 'sender') {
+      console.log(`[Socket] Sender "${name}" (${socket.id}) joined room: ${code}`);
     }
 
-    // Send room status back to joining client
+    // Send room status back ONLY to the joining socket
     socket.emit('room_state', {
       exists: !!room,
       room: room ? {
@@ -153,7 +161,8 @@ io.on('connection', (socket) => {
         groupName: room.groupName,
         senderName: room.senderName,
         files: room.files,
-        receiversCount: room.receivers.length
+        receiversCount: room.receivers.length,
+        downloads: room.downloads || []
       } : null
     });
   });
@@ -241,14 +250,6 @@ io.on('connection', (socket) => {
 
     if (targetSocketId) {
       io.to(targetSocketId).emit('room_state', payload);
-      io.to(targetSocketId).emit('files_updated', {
-        code: room.code,
-        groupName: room.groupName,
-        senderName: room.senderName,
-        files: room.files
-      });
-    } else {
-      io.to(code).emit('room_state', payload);
     }
   });
 

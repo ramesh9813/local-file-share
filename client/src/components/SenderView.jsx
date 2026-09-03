@@ -59,6 +59,16 @@ export default function SenderView({
     if (groupName) localStorage.setItem('localshare_group', groupName);
   }, [groupName]);
 
+  // Keep ref to latest activeSession to avoid listener re-binding loops
+  const activeSessionRef = useRef(activeSession);
+  useEffect(() => {
+    activeSessionRef.current = activeSession;
+  }, [activeSession]);
+
+  // Track receivers we have already greeted and sent files to
+  const greetedReceiversRef = useRef(new Set());
+  const joinedCodeRef = useRef(null);
+
   // When activeSession changes, sync with storage and download records
   useEffect(() => {
     if (activeSession) {
@@ -69,24 +79,38 @@ export default function SenderView({
 
   // Socket.IO Room & Real-time Auto-Send Listeners
   useEffect(() => {
-    if (!socket || !activeSession) return;
+    if (!socket || !activeSession?.code) return;
 
-    // Join room as sender
-    socket.emit('join_room', {
-      code: activeSession.code,
-      role: 'sender',
-      name: activeSession.senderName
-    });
+    const currentCode = activeSession.code;
 
-    // Automatically sync stored files with server room
-    socket.emit('sync_session_from_sender', {
-      code: activeSession.code,
-      roomData: activeSession
-    });
+    // Only join room if session code changed
+    if (joinedCodeRef.current !== currentCode) {
+      joinedCodeRef.current = currentCode;
+      greetedReceiversRef.current.clear();
+
+      socket.emit('join_room', {
+        code: currentCode,
+        role: 'sender',
+        name: activeSession.senderName
+      });
+
+      socket.emit('sync_session_from_sender', {
+        code: currentCode,
+        roomData: activeSession
+      });
+    }
 
     // When a new receiver connects with the 4-digit PIN:
     const handleReceiverJoined = (data) => {
-      showToast(`Receiver "${data.receiverName}" connected! Files sent automatically.`, 'success');
+      if (!data || !data.socketId) return;
+
+      // DEDUPLICATE: Only notify and auto-send ONCE per receiver socketId
+      if (greetedReceiversRef.current.has(data.socketId)) {
+        return;
+      }
+      greetedReceiversRef.current.add(data.socketId);
+
+      showToast(`Receiver "${data.receiverName}" connected! Files sent.`, 'success');
 
       setConnectedReceivers(prev => {
         if (!prev.some(r => r.socketId === data.socketId)) {
@@ -95,26 +119,34 @@ export default function SenderView({
         return prev;
       });
 
-      // Auto-send session and files directly to this newly connected receiver!
-      socket.emit('sync_session_from_sender', {
-        code: activeSession.code,
-        roomData: activeSession,
-        targetSocketId: data.socketId
-      });
+      // Auto-send session and files ONCE to this newly connected receiver
+      const session = activeSessionRef.current;
+      if (session) {
+        socket.emit('sync_session_from_sender', {
+          code: session.code,
+          roomData: session,
+          targetSocketId: data.socketId
+        });
+      }
     };
 
     const handleReceiverLeft = (data) => {
-      showToast(`Receiver "${data.receiverName}" disconnected.`, 'info');
-      setConnectedReceivers(prev => prev.filter(r => r.name !== data.receiverName));
+      if (data && data.receiverName) {
+        showToast(`Receiver "${data.receiverName}" disconnected.`, 'info');
+        setConnectedReceivers(prev => prev.filter(r => r.name !== data.receiverName));
+      }
     };
 
     const handleFilesUpdated = (data) => {
-      setActiveSession(prev => {
-        if (!prev) return prev;
-        const updated = { ...prev, files: data.files };
-        saveActiveSession(updated);
-        return updated;
-      });
+      if (data && data.files) {
+        setActiveSession(prev => {
+          if (!prev) return prev;
+          if (JSON.stringify(prev.files) === JSON.stringify(data.files)) return prev;
+          const updated = { ...prev, files: data.files };
+          saveActiveSession(updated);
+          return updated;
+        });
+      }
     };
 
     // When a receiver downloads a file:
@@ -122,17 +154,18 @@ export default function SenderView({
       showToast(`"${record.receiverName}" downloaded "${record.fileName}"`, 'info');
       setDownloadActivities(prev => {
         const updated = [record, ...prev];
-        saveDownloadRecord(activeSession.code, record);
+        saveDownloadRecord(currentCode, record);
         return updated;
       });
     };
 
     // If server requests sender's cached files
     const handleRequestSenderFiles = (data) => {
-      if (data.code === activeSession.code) {
+      const session = activeSessionRef.current;
+      if (session && data.code === session.code) {
         socket.emit('sync_session_from_sender', {
-          code: activeSession.code,
-          roomData: activeSession,
+          code: session.code,
+          roomData: session,
           targetSocketId: data.requesterId
         });
       }
@@ -151,7 +184,7 @@ export default function SenderView({
       socket.off('download_activity', handleDownloadActivity);
       socket.off('request_sender_files', handleRequestSenderFiles);
     };
-  }, [socket, activeSession]);
+  }, [socket, activeSession?.code]);
 
   const handleRegenerateCode = () => {
     setCode(generateFourDigitCode());

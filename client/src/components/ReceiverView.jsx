@@ -51,23 +51,42 @@ export default function ReceiverView({
     }
   }, [receiverName]);
 
+  // Track session codes for which we've already shown the initial received toast
+  const receivedToastShownRef = useRef(new Set());
+
   useEffect(() => {
     if (!socket) return;
 
     const handleRoomState = (data) => {
       if (data && data.exists && data.room) {
-        setSessionData(data.room);
         setIsConnecting(false);
-        showToast(`Files received for session "${data.room.groupName}"!`, 'success');
+        setSessionData(prev => {
+          if (prev && prev.code === data.room.code && JSON.stringify(prev.files) === JSON.stringify(data.room.files)) {
+            return prev;
+          }
+          return data.room;
+        });
+
+        // Only show toast ONCE per session code
+        if (!receivedToastShownRef.current.has(data.room.code)) {
+          receivedToastShownRef.current.add(data.room.code);
+          showToast(`Files received for session "${data.room.groupName}"!`, 'success');
+        }
       }
     };
 
     const handleFilesUpdated = (data) => {
-      showToast('Sender uploaded new files!', 'info');
-      setSessionData(prev => ({
-        ...prev,
-        files: data.files
-      }));
+      if (data && data.files) {
+        setSessionData(prev => {
+          if (!prev) return prev;
+          if (JSON.stringify(prev.files) === JSON.stringify(data.files)) return prev;
+          showToast('Sender uploaded new files!', 'info');
+          return {
+            ...prev,
+            files: data.files
+          };
+        });
+      }
     };
 
     const handleSessionClosed = (data) => {
@@ -85,16 +104,6 @@ export default function ReceiverView({
       socket.off('session_closed', handleSessionClosed);
     };
   }, [socket]);
-
-  useEffect(() => {
-    if (!socket || !sessionData) return;
-
-    socket.emit('join_room', {
-      code: sessionData.code,
-      role: 'receiver',
-      name: receiverName || 'Anonymous Receiver'
-    });
-  }, [socket, sessionData, receiverName]);
 
   const handleDigitChange = (index, value) => {
     setErrorMessage('');
