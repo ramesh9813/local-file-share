@@ -261,6 +261,18 @@ export default function Header({ networkInfo, onOpenQr }) {
                                   </button>
 
                                   <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      onOpenQr(s.code);
+                                      setSessionsDropdownOpen(false);
+                                    }}
+                                    className="p-1 rounded-lg hover:bg-indigo-50 dark:hover:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 transition"
+                                    title={`Generate Group QR Code for "${s.groupName}"`}
+                                  >
+                                    <QrCode className="w-3.5 h-3.5" />
+                                  </button>
+
+                                  <button
                                     onClick={(e) => handleCloseSessionClick(e, s.code, s.groupName)}
                                     className="p-1 rounded-lg hover:bg-rose-50 dark:hover:bg-rose-500/20 text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 transition"
                                     title="Close this sending session"

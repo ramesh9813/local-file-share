@@ -17,8 +17,14 @@ import { getSocket } from './utils/socket';
 export default function App() {
   const [networkInfo, setNetworkInfo] = useState(null);
   const [isQrOpen, setIsQrOpen] = useState(false);
+  const [qrGroupCode, setQrGroupCode] = useState(null);
   const [socket, setSocket] = useState(null);
   const [toasts, setToasts] = useState([]);
+
+  const handleOpenQr = (code = null) => {
+    setQrGroupCode(code);
+    setIsQrOpen(true);
+  };
 
   // Toast alert system
   const showToast = (message, type = 'info') => {
@@ -56,7 +62,7 @@ export default function App() {
             {/* Header with React Router Navigation & Theme Switcher */}
             <Header 
               networkInfo={networkInfo} 
-              onOpenQr={() => setIsQrOpen(true)} 
+              onOpenQr={handleOpenQr} 
             />
 
           {/* Main Content Area Routed via React Router */}
@@ -67,7 +73,7 @@ export default function App() {
                 element={
                   <LandingPage 
                     networkInfo={networkInfo} 
-                    onOpenQr={() => setIsQrOpen(true)} 
+                    onOpenQr={handleOpenQr} 
                   />
                 } 
               />
@@ -77,7 +83,7 @@ export default function App() {
                   <SenderView 
                     socket={socket} 
                     networkInfo={networkInfo} 
-                    onOpenQr={() => setIsQrOpen(true)} 
+                    onOpenQr={handleOpenQr} 
                     showToast={showToast} 
                   />
                 } 
@@ -98,14 +104,18 @@ export default function App() {
           {/* Suitable Footer */}
           <Footer 
             networkInfo={networkInfo} 
-            onOpenQr={() => setIsQrOpen(true)} 
+            onOpenQr={handleOpenQr} 
           />
 
           {/* QR Code Modal with Instant Client-Side QR Generator */}
           <QrModal 
             isOpen={isQrOpen}
-            onClose={() => setIsQrOpen(false)}
+            onClose={() => {
+              setIsQrOpen(false);
+              setQrGroupCode(null);
+            }}
             networkInfo={networkInfo}
+            activeCode={qrGroupCode}
           />
 
           {/* Toast Alerts Container */}

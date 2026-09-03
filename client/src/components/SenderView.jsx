@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { 
   UploadCloud, FileText, Image as ImageIcon, Video, Music, Archive, 
   File, Trash2, Dices, Copy, Check, Users, ArrowLeft, RefreshCw, 
-  Share2, PlusCircle, Wifi, Download, UserCheck, FolderPlus, Layers 
+  Share2, PlusCircle, Wifi, Download, UserCheck, FolderPlus, Layers, QrCode 
 } from 'lucide-react';
 import { formatBytes, generateFourDigitCode, getFileCategory } from '../utils/fileHelpers';
 import { uploadFilesWithProgress, getApiBaseUrl } from '../utils/apiClient';
@@ -402,23 +402,39 @@ export default function SenderView({
           {sessions.map((s) => {
             const isActive = currentSession?.code === s.code;
             return (
-              <button
-                key={s.code}
-                onClick={() => setSelectedCode(s.code)}
-                className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold transition flex-shrink-0 shadow-sm ${
-                  isActive
-                    ? 'bg-indigo-600 text-white shadow-indigo-600/25'
-                    : 'bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-800 hover:border-indigo-400'
-                }`}
-              >
-                <Layers className="w-3.5 h-3.5" />
-                <span className="truncate max-w-[120px] sm:max-w-[160px]">{s.groupName}</span>
-                <span className={`px-1.5 py-0.2 rounded font-mono text-[10px] ${
-                  isActive ? 'bg-indigo-700 text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-500'
-                }`}>
-                  {s.code}
-                </span>
-              </button>
+              <div key={s.code} className="inline-flex items-center rounded-xl shadow-sm overflow-hidden flex-shrink-0 border border-slate-200 dark:border-slate-800">
+                <button
+                  onClick={() => setSelectedCode(s.code)}
+                  className={`flex items-center gap-2 px-3 py-2 text-xs font-semibold transition ${
+                    isActive
+                      ? 'bg-indigo-600 text-white'
+                      : 'bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-850'
+                  }`}
+                >
+                  <Layers className="w-3.5 h-3.5" />
+                  <span className="truncate max-w-[110px] sm:max-w-[150px]">{s.groupName}</span>
+                  <span className={`px-1.5 py-0.2 rounded font-mono text-[10px] ${
+                    isActive ? 'bg-indigo-700 text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-500'
+                  }`}>
+                    {s.code}
+                  </span>
+                </button>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onOpenQr(s.code);
+                  }}
+                  title={`Generate Group QR for "${s.groupName}" - Scan to connect & download`}
+                  className={`p-2 transition border-l border-slate-200 dark:border-slate-800 ${
+                    isActive
+                      ? 'bg-indigo-700 hover:bg-indigo-800 text-white'
+                      : 'bg-white dark:bg-slate-900 text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-slate-50 dark:hover:bg-slate-850'
+                  }`}
+                >
+                  <QrCode className="w-3.5 h-3.5" />
+                </button>
+              </div>
             );
           })}
 
@@ -438,11 +454,11 @@ export default function SenderView({
 
         <div className="flex items-center gap-2">
           <button
-            onClick={onOpenQr}
+            onClick={() => onOpenQr(currentSession?.code || null)}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-indigo-400 text-xs text-slate-700 dark:text-slate-300 font-semibold transition shadow-sm"
           >
-            <Share2 className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
-            <span>QR Code</span>
+            <QrCode className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
+            <span>Group QR Code</span>
           </button>
         </div>
       </div>
@@ -485,7 +501,7 @@ export default function SenderView({
                 <p className="text-xs text-slate-500 dark:text-slate-400 font-normal mt-0.5">
                   {connectedReceivers.length > 0 
                     ? `${connectedReceivers.length} receiver(s) connected to "${currentSession.groupName}"` 
-                    : 'Waiting for receiver to enter this PIN...'}
+                    : 'Waiting for receiver to enter this PIN or scan QR...'}
                 </p>
               </div>
             </div>
@@ -517,46 +533,68 @@ export default function SenderView({
                   {currentSession.groupName}
                 </h2>
                 <p className="text-sm text-slate-600 dark:text-slate-400 font-normal leading-relaxed">
-                  Shared by <span className="font-semibold text-slate-900 dark:text-slate-200">{currentSession.senderName}</span> • Give this 4-digit code to receivers
+                  Shared by <span className="font-semibold text-slate-900 dark:text-slate-200">{currentSession.senderName}</span> • Give this PIN or scan the group QR code below
                 </p>
               </div>
 
-              {/* 4-Digit PIN Box */}
+              {/* 4-Digit PIN Box with Group QR Button */}
               <div className="flex flex-col items-center gap-2">
                 <span className="text-xs font-bold uppercase tracking-wider text-indigo-600 dark:text-indigo-400">
                   Receiver 4-Digit PIN
                 </span>
-                <div className="flex items-center gap-2 bg-slate-50 dark:bg-slate-950/90 border border-slate-200 dark:border-slate-800 rounded-2xl p-3 px-5 shadow-sm">
+                <div className="flex items-center gap-2 bg-slate-50 dark:bg-slate-950/90 border border-slate-200 dark:border-slate-800 rounded-2xl p-2.5 px-4 shadow-sm">
                   <span className="text-4xl sm:text-5xl font-extrabold tracking-widest font-mono text-slate-900 dark:text-white">
                     {currentSession.code}
                   </span>
-                  <button
-                    onClick={handleCopyCode}
-                    title="Copy PIN"
-                    className="p-2 ml-2 rounded-xl bg-indigo-50 dark:bg-indigo-500/10 hover:bg-indigo-100 dark:hover:bg-indigo-500/20 border border-indigo-200 dark:border-indigo-500/20 text-indigo-600 dark:text-indigo-400 transition"
-                  >
-                    {copiedCode ? <Check className="w-5 h-5 text-indigo-600 dark:text-indigo-400" /> : <Copy className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />}
-                  </button>
+                  <div className="flex items-center gap-1.5 ml-2">
+                    <button
+                      onClick={handleCopyCode}
+                      title="Copy PIN"
+                      className="p-2.5 rounded-xl bg-indigo-50 dark:bg-indigo-500/10 hover:bg-indigo-100 dark:hover:bg-indigo-500/20 border border-indigo-200 dark:border-indigo-500/20 text-indigo-600 dark:text-indigo-400 transition"
+                    >
+                      {copiedCode ? <Check className="w-5 h-5 text-indigo-600 dark:text-indigo-400" /> : <Copy className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />}
+                    </button>
+
+                    {/* USER REQUESTED: Group Wise QR Button */}
+                    <button
+                      onClick={() => onOpenQr(currentSession.code)}
+                      title={`Generate Group QR Code for "${currentSession.groupName}" - Scan to connect directly & download files`}
+                      className="p-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm transition flex items-center gap-1.5 text-xs font-semibold"
+                    >
+                      <QrCode className="w-5 h-5 text-white" />
+                      <span className="hidden sm:inline">Group QR</span>
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
 
-            {/* Quick link bar */}
+            {/* Quick link bar with Generate Group QR button */}
             <div className="pt-5 border-t border-slate-100 dark:border-slate-800/80 flex flex-wrap items-center justify-between gap-3">
               <div className="flex items-center gap-2 text-xs text-slate-600 dark:text-slate-400 font-normal">
                 <Wifi className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
                 <span>Direct Link:</span>
                 <span className="font-mono text-indigo-600 dark:text-indigo-300 max-w-[280px] sm:max-w-md truncate">
-                  {`${window.location.origin}/receive?code=${currentSession.code}`}
+                  {`${window.location.origin}/receive?code=${currentSession.code}&group=${encodeURIComponent(currentSession.groupName)}`}
                 </span>
               </div>
-              <button
-                onClick={handleCopyLink}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 hover:border-indigo-400 dark:hover:border-indigo-500/40 text-slate-700 dark:text-slate-200 text-xs font-medium transition"
-              >
-                {copiedLink ? <Check className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" /> : <Copy className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />}
-                <span>{copiedLink ? 'Link Copied' : 'Copy Direct Link'}</span>
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => onOpenQr(currentSession.code)}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold shadow-sm transition"
+                  title="Generate QR code for this group"
+                >
+                  <QrCode className="w-3.5 h-3.5 text-white" />
+                  <span>Generate Group QR</span>
+                </button>
+                <button
+                  onClick={handleCopyLink}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 hover:border-indigo-400 dark:hover:border-indigo-500/40 text-slate-700 dark:text-slate-200 text-xs font-medium transition"
+                >
+                  {copiedLink ? <Check className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" /> : <Copy className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />}
+                  <span>{copiedLink ? 'Link Copied' : 'Copy Direct Link'}</span>
+                </button>
+              </div>
             </div>
 
             {/* USER REQUESTED: WHO DOWNLOADED PERSON LIST DIRECTLY BELOW IN SAME PIN CARD */}

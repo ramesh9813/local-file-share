@@ -4,7 +4,7 @@ import {
   DownloadCloud, UploadCloud, Eye, Download, Archive, 
   FileText, Image as ImageIcon, Video, Music, File, 
   ArrowLeft, RefreshCw, AlertCircle, ShieldCheck, 
-  Wifi, FolderDown, Users, CheckCircle2, XCircle, Lock, Layers, User 
+  Wifi, FolderDown, Users, CheckCircle2, XCircle, Lock, Layers, User, QrCode 
 } from 'lucide-react';
 import { formatBytes, getFileCategory, isPreviewable } from '../utils/fileHelpers';
 import { safeFetchJson, getApiBaseUrl } from '../utils/apiClient';
@@ -627,8 +627,23 @@ export default function ReceiverView({
           </div>
         )}
 
+        {/* Scanned via QR Indicator */}
+        {initialCode && (
+          <div className="flex items-center justify-between p-3.5 rounded-2xl bg-indigo-50 dark:bg-indigo-500/10 border border-indigo-200 dark:border-indigo-500/20 text-xs animate-fadeIn">
+            <div className="flex items-center gap-2.5">
+              <QrCode className="w-4 h-4 text-indigo-600 dark:text-indigo-400 animate-pulse" />
+              <span>
+                QR Scanned for <strong className="text-indigo-900 dark:text-white">{groupParam || 'Group'}</strong> (PIN: <strong className="font-mono text-indigo-600 dark:text-indigo-400">{initialCode}</strong>)
+              </span>
+            </div>
+            <span className="text-[10px] font-bold text-emerald-700 dark:text-emerald-400 bg-emerald-100 dark:bg-emerald-500/20 px-2.5 py-0.5 rounded-full uppercase tracking-wider">
+              PIN Auto-Filled
+            </span>
+          </div>
+        )}
+
         {/* Selected Target Group Indicator */}
-        {targetSession && (
+        {targetSession && !initialCode && (
           <div className="flex items-center justify-between p-3 rounded-2xl bg-indigo-50/80 dark:bg-indigo-500/10 border border-indigo-200 dark:border-indigo-500/20 text-xs animate-fadeIn">
             <div className="flex items-center gap-2">
               <Lock className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
@@ -675,6 +690,15 @@ export default function ReceiverView({
               setReceiverName(e.target.value);
               if (e.target.value.trim() && errorMessage.toLowerCase().includes('name')) {
                 setErrorMessage('');
+              }
+            }}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                if (receiverName.trim() && getFullPin().length === 4) {
+                  handleConnect();
+                } else if (getFullPin().length < 4) {
+                  inputRefs[0]?.current?.focus();
+                }
               }
             }}
             className={`w-full px-4 py-2.5 rounded-xl bg-white dark:bg-slate-900 border text-sm font-medium transition focus:outline-none ${
@@ -738,7 +762,7 @@ export default function ReceiverView({
           ) : !receiverName.trim() ? (
             <>
               <User className="w-4 h-4 text-white" />
-              <span>Enter Your Name to Connect</span>
+              <span>Enter Your Name to Connect & Download</span>
             </>
           ) : getFullPin().length !== 4 ? (
             <>
@@ -748,7 +772,7 @@ export default function ReceiverView({
           ) : (
             <>
               <DownloadCloud className="w-4 h-4 text-white" />
-              <span>Connect & View Files</span>
+              <span>Connect & Download Files</span>
             </>
           )}
         </button>

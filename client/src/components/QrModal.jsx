@@ -16,8 +16,10 @@ export default function QrModal({ isOpen, onClose, networkInfo, activeCode: prop
   const [chosenCode, setChosenCode] = useState(effectiveCode);
 
   useEffect(() => {
-    setChosenCode(effectiveCode);
-  }, [effectiveCode, isOpen]);
+    setChosenCode(propActiveCode || selectedCode || (sessions.length > 0 ? sessions[0].code : null));
+  }, [propActiveCode, selectedCode, isOpen]);
+
+  const chosenSession = sessions.find(s => s.code === chosenCode);
 
   // Compute a 100% valid, accessible HTTP/HTTPS URL
   const getTargetUrl = () => {
@@ -33,9 +35,10 @@ export default function QrModal({ isOpen, onClose, networkInfo, activeCode: prop
       }
     }
 
-    // Direct receiver link with PIN query param if session code is active
+    // Direct receiver link with PIN and group query param for immediate group connection
     if (chosenCode && /^\d{4}$/.test(chosenCode)) {
-      return `${baseUrl}/receive?code=${chosenCode}`;
+      const groupParam = chosenSession?.groupName ? `&group=${encodeURIComponent(chosenSession.groupName)}` : '';
+      return `${baseUrl}/receive?code=${chosenCode}${groupParam}`;
     }
 
     return `${baseUrl}/receive`;
@@ -82,7 +85,8 @@ export default function QrModal({ isOpen, onClose, networkInfo, activeCode: prop
     if (!qrDataUrl) return;
     const link = document.createElement('a');
     link.href = qrDataUrl;
-    link.download = `airlink-qr-${chosenCode || 'receiver'}.png`;
+    const safeName = chosenSession?.groupName ? chosenSession.groupName.replace(/[^a-zA-Z0-9_-]/g, '_') : (chosenCode || 'receiver');
+    link.download = `airlink-qr-${safeName}-${chosenCode || 'link'}.png`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -109,10 +113,37 @@ export default function QrModal({ isOpen, onClose, networkInfo, activeCode: prop
             <QrCode className="w-6 h-6 text-indigo-600 dark:text-indigo-400" />
           </div>
           <div>
-            <h3 className="text-lg font-bold text-slate-900 dark:text-white tracking-tight">Connect with QR Code</h3>
-            <p className="text-xs text-slate-500 dark:text-slate-400 font-normal mt-0.5">Point any smartphone camera to connect</p>
+            <h3 className="text-lg font-bold text-slate-900 dark:text-white tracking-tight">
+              {chosenSession ? `Group QR: ${chosenSession.groupName}` : 'Connect with QR Code'}
+            </h3>
+            <p className="text-xs text-slate-500 dark:text-slate-400 font-normal mt-0.5">
+              {chosenSession 
+                ? 'Scan to connect directly & download files' 
+                : 'Point any smartphone camera to connect'}
+            </p>
           </div>
         </div>
+
+        {/* Prominent Group Badge */}
+        {chosenSession && (
+          <div className="p-3 mb-4 rounded-2xl bg-indigo-50/80 dark:bg-indigo-500/10 border border-indigo-200 dark:border-indigo-500/20 flex items-center justify-between">
+            <div className="space-y-0.5">
+              <div className="flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                <span className="text-xs font-bold text-slate-900 dark:text-white">
+                  {chosenSession.groupName}
+                </span>
+              </div>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                {chosenSession.files?.length || 0} file(s) ready for download
+              </p>
+            </div>
+            <div className="flex items-center gap-1 px-2.5 py-1 rounded-xl bg-white dark:bg-slate-900 border border-indigo-200 dark:border-indigo-500/30">
+              <span className="text-[10px] text-slate-400 uppercase font-bold">PIN</span>
+              <span className="font-mono text-sm font-extrabold text-indigo-600 dark:text-indigo-400">{chosenSession.code}</span>
+            </div>
+          </div>
+        )}
 
         {/* Session Selector if Multiple Active Sessions Exist */}
         {sessions.length > 0 && (
